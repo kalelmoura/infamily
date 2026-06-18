@@ -27,3 +27,8 @@ Internal management system for a clothing store (inf.amily, owner: Yasmin), plus
 ## Security
 - Never hardcode or commit secrets. All keys and connection strings live in env vars (`.env` files, gitignored).
 - The Supabase secret key and DB connection string are backend-only — never in the frontend or client code.
+
+## Language
+- Development language is English: all code, comments, variable/function names, commit messages, and your explanations to me are in English.
+- Product language is Portuguese (pt-BR): everything the end user sees — page text, button and form labels, validation and error messages, the landing copy — must be in Brazilian Portuguese. The landing tagline is exactly "por família – pra família".
+- These are independent: never write code or comments in Portuguese, and never put English in the app's UI.
