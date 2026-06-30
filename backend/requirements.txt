@@ -1,0 +1,12 @@
+# Phase 0 dependencies only. More are added in their roadmap phases:
+#   Phase 1 (auth):      PyJWT  (verify Supabase tokens via JWKS)
+#   Phase 2+ (database): SQLAlchemy, asyncpg
+#   Phase 4 (fiado):     python-dateutil  (installment date math)
+#
+# uvicorn is intentionally the plain build (not uvicorn[standard]) to avoid
+# compiled extras (uvloop/httptools/watchfiles) that may lack wheels on very
+# new Python versions. --reload still works via a stat-based fallback reloader.
+
+fastapi
+uvicorn
+pydantic-settings
