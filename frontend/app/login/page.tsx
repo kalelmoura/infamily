@@ -7,7 +7,7 @@ export default function LoginPage() {
     <main className="flex flex-1 flex-col items-center justify-center px-6 text-center">
       <h1 className="text-2xl font-semibold tracking-tight">Entrar</h1>
 
-      <p className="mt-3 text-sm text-zinc-500">Login disponível em breve.</p>
+      <p className="mt-3 text-sm text-zinc-500">Login indisponível no momento..</p>
 
       <Link
         href="/"
