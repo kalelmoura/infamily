@@ -1,4 +1,4 @@
-# inf.amily
+# infamily
 
 Internal management system for the **inf.amily** clothing store (inventory, sales,
 fiado/store-credit, and a financial summary), plus a public landing page.
