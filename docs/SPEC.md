@@ -1,12 +1,14 @@
-# Technical Specification — inf.amily
+# Technical Specification — infamily
+
 ## Inventory, Sales, Fiado, and Financial Summary
 
-> Store project: **inf.amily** (Yasmin's clothing store). An internal management tool with four modules — Inventory, Sales, Fiado, and Financial summary — protected by login, plus a public landing page.
-> **This document contains no code.** It describes what to build and how, leaving implementation to the development phase.
+> Store project: **infamily** (Yasmin's clothing store). An internal management tool with four modules — Inventory, Sales, Fiado, and Financial summary — protected by login, plus a public landing page. **This document contains no code.** It describes what to build and how, leaving implementation to the development phase.
 
 > **Language convention:** This spec and all development (code, comments, identifiers, commit messages, prompts) are in English. All user-facing UI text is in Brazilian Portuguese (pt-BR). Portuguese strings that must appear in the product are shown in quotes and marked as UI text.
 
 ---
+
+
 
 ## 1. System objective
 
@@ -19,6 +21,8 @@ The single primary user of the internal system is Yasmin, the store owner, who i
 MVP success: the owner can, unaided, (a) register an item, (b) record a sale that deducts from stock, (c) record and collect a fiado, and (d) see how much came in and how much was earned.
 
 ---
+
+
 
 ## 2. Module overview
 
@@ -46,6 +50,8 @@ In the UI this appears as **two distinct flows** ("Registrar venda" and "Registr
 
 ---
 
+
+
 ## 3. System architecture
 
 A three-tier architecture, with a clear boundary between the public part (landing page) and the internal part protected by login.
@@ -53,7 +59,7 @@ A three-tier architecture, with a clear boundary between the public part (landin
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  BROWSER                                                      │
-│   inf.amily landing (public)        Internal system (login)   │
+│   infamily landing (public)        Internal system (login)   │
 └───────────────┬───────────────────────────┬──────────────────┘
                 │  HTTPS                       │  HTTPS + JWT (Bearer)
                 ▼                             ▼
@@ -76,6 +82,8 @@ The **Next.js frontend** covers the whole interface — public landing and inter
 
 ---
 
+
+
 ## 4. Technical stack
 
 Mandatory per the project; recommended libraries as guidance.
@@ -91,10 +99,13 @@ Mandatory per the project; recommended libraries as guidance.
 **Deploy** — Frontend on Vercel; backend on Render/Railway/Fly.io; database on Supabase. All with HTTPS by default.
 
 **Environment variables (where each goes):**
+
 - Frontend (`.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL` (the FastAPI base URL).
 - Backend (`.env`): `DATABASE_URL` (Postgres connection string), `SUPABASE_JWKS_URL` (to verify tokens), `FRONTEND_ORIGIN` (allowed CORS origin). Optional: `SUPABASE_URL` and `SUPABASE_SECRET_KEY` if the backend ever calls the Supabase API directly (server-side only).
 
 ---
+
+
 
 ## 5. Database model
 
@@ -111,71 +122,85 @@ A sale (`sales`) has many items (`sale_items`); each item points to one product 
 
 ### Table `products` (Inventory)
 
-| Field            | Type            | Constraints              | Description                              |
-|------------------|-----------------|--------------------------|------------------------------------------|
-| `id`             | UUID            | PK                       | Item identifier.                         |
-| `name`           | TEXT            | NOT NULL                 | Item name.                               |
-| `cost_price`     | NUMERIC(10,2)   | NOT NULL, >= 0           | Price paid for the item (cost).          |
-| `sale_price`     | NUMERIC(10,2)   | NOT NULL, >= 0           | Selling price.                           |
-| `stock_quantity` | INTEGER         | NOT NULL, >= 0           | Quantity in stock.                       |
-| `created_at`     | TIMESTAMPTZ     | NOT NULL, default now    | Creation.                                |
-| `updated_at`     | TIMESTAMPTZ     | NOT NULL, default now    | Last update.                             |
+
+| Field            | Type          | Constraints           | Description                     |
+| ---------------- | ------------- | --------------------- | ------------------------------- |
+| `id`             | UUID          | PK                    | Item identifier.                |
+| `name`           | TEXT          | NOT NULL              | Item name.                      |
+| `cost_price`     | NUMERIC(10,2) | NOT NULL, >= 0        | Price paid for the item (cost). |
+| `sale_price`     | NUMERIC(10,2) | NOT NULL, >= 0        | Selling price.                  |
+| `stock_quantity` | INTEGER       | NOT NULL, >= 0        | Quantity in stock.              |
+| `created_at`     | TIMESTAMPTZ   | NOT NULL, default now | Creation.                       |
+| `updated_at`     | TIMESTAMPTZ   | NOT NULL, default now | Last update.                    |
+
+
+
 
 ### Table `sales` (Sales)
 
-| Field            | Type            | Constraints                                 | Description                                       |
-|------------------|-----------------|---------------------------------------------|---------------------------------------------------|
-| `id`             | UUID            | PK                                          | Sale identifier.                                  |
-| `sale_date`      | DATE            | NOT NULL                                    | Sale date.                                        |
-| `payment_method` | TEXT            | NOT NULL, ∈ {dinheiro, pix, cartao, fiado}  | Payment method (values are domain codes).         |
-| `total_amount`   | NUMERIC(10,2)   | NOT NULL                                    | Sum of items at sale price (snapshot).            |
-| `total_cost`     | NUMERIC(10,2)   | NOT NULL                                    | Sum of item costs (snapshot, for profit).         |
-| `created_at`     | TIMESTAMPTZ     | NOT NULL, default now                       | Creation.                                         |
+
+| Field            | Type          | Constraints                                | Description                               |
+| ---------------- | ------------- | ------------------------------------------ | ----------------------------------------- |
+| `id`             | UUID          | PK                                         | Sale identifier.                          |
+| `sale_date`      | DATE          | NOT NULL                                   | Sale date.                                |
+| `payment_method` | TEXT          | NOT NULL, ∈ {dinheiro, pix, cartao, fiado} | Payment method (values are domain codes). |
+| `total_amount`   | NUMERIC(10,2) | NOT NULL                                   | Sum of items at sale price (snapshot).    |
+| `total_cost`     | NUMERIC(10,2) | NOT NULL                                   | Sum of item costs (snapshot, for profit). |
+| `created_at`     | TIMESTAMPTZ   | NOT NULL, default now                      | Creation.                                 |
+
 
 `total_amount` and `total_cost` are computed at sale time from the items and stored (denormalized) so the financial summary is fast and history stays stable even if prices change later.
 
 ### Table `sale_items` (sale line items)
 
-| Field             | Type            | Constraints               | Description                                  |
-|-------------------|-----------------|---------------------------|----------------------------------------------|
-| `id`              | UUID            | PK                        | Line item identifier.                        |
-| `sale_id`         | UUID            | FK → sales, NOT NULL      | Sale this item belongs to.                   |
-| `product_id`      | UUID            | FK → products, NOT NULL   | Product sold.                                |
-| `quantity`        | INTEGER         | NOT NULL, > 0             | Quantity sold.                               |
-| `unit_sale_price` | NUMERIC(10,2)   | NOT NULL                  | Sale price **at sale time** (snapshot).      |
-| `unit_cost_price` | NUMERIC(10,2)   | NOT NULL                  | Cost **at sale time** (snapshot).            |
+
+| Field             | Type          | Constraints             | Description                             |
+| ----------------- | ------------- | ----------------------- | --------------------------------------- |
+| `id`              | UUID          | PK                      | Line item identifier.                   |
+| `sale_id`         | UUID          | FK → sales, NOT NULL    | Sale this item belongs to.              |
+| `product_id`      | UUID          | FK → products, NOT NULL | Product sold.                           |
+| `quantity`        | INTEGER       | NOT NULL, > 0           | Quantity sold.                          |
+| `unit_sale_price` | NUMERIC(10,2) | NOT NULL                | Sale price **at sale time** (snapshot). |
+| `unit_cost_price` | NUMERIC(10,2) | NOT NULL                | Cost **at sale time** (snapshot).       |
+
 
 Price snapshotting is essential: if the owner later changes an item's price, past sales and historical profit must **not** change.
 
 ### Table `fiado_accounts` (Fiado)
 
-| Field                    | Type            | Constraints                             | Description                                                  |
-|--------------------------|-----------------|-----------------------------------------|--------------------------------------------------------------|
-| `id`                     | UUID            | PK                                      | Fiado identifier.                                            |
-| `sale_id`                | UUID            | FK → sales, NOT NULL, UNIQUE (1:1)      | Sale that originated the fiado (holds the items taken).      |
-| `customer_name`          | TEXT            | NOT NULL                                | Person's name.                                               |
-| `frequency`              | TEXT            | NOT NULL, ∈ {weekly, biweekly, monthly} | Payment frequency.                                           |
-| `installments_count`     | INTEGER         | NOT NULL, > 0                           | Number of installments.                                      |
-| `installment_amount`     | NUMERIC(10,2)   | NOT NULL                                | Installment value (auto = total ÷ count; see section 16).    |
-| `agreed_settlement_date` | DATE            | NOT NULL                                | Agreed settlement date (fixed reference).                    |
-| `next_due_date`          | DATE            | NOT NULL                                | Next installment due (advances on each payment).             |
-| `remaining_balance`      | NUMERIC(10,2)   | NOT NULL, >= 0                          | Remaining balance (starts at the sale total).                |
-| `created_at`             | TIMESTAMPTZ     | NOT NULL, default now                   | Creation.                                                    |
-| `updated_at`             | TIMESTAMPTZ     | NOT NULL, default now                   | Last update.                                                 |
+
+| Field                    | Type          | Constraints                             | Description                                               |
+| ------------------------ | ------------- | --------------------------------------- | --------------------------------------------------------- |
+| `id`                     | UUID          | PK                                      | Fiado identifier.                                         |
+| `sale_id`                | UUID          | FK → sales, NOT NULL, UNIQUE (1:1)      | Sale that originated the fiado (holds the items taken).   |
+| `customer_name`          | TEXT          | NOT NULL                                | Person's name.                                            |
+| `frequency`              | TEXT          | NOT NULL, ∈ {weekly, biweekly, monthly} | Payment frequency.                                        |
+| `installments_count`     | INTEGER       | NOT NULL, > 0                           | Number of installments.                                   |
+| `installment_amount`     | NUMERIC(10,2) | NOT NULL                                | Installment value (auto = total ÷ count; see section 16). |
+| `agreed_settlement_date` | DATE          | NOT NULL                                | Agreed settlement date (fixed reference).                 |
+| `next_due_date`          | DATE          | NOT NULL                                | Next installment due (advances on each payment).          |
+| `remaining_balance`      | NUMERIC(10,2) | NOT NULL, >= 0                          | Remaining balance (starts at the sale total).             |
+| `created_at`             | TIMESTAMPTZ   | NOT NULL, default now                   | Creation.                                                 |
+| `updated_at`             | TIMESTAMPTZ   | NOT NULL, default now                   | Last update.                                              |
+
 
 `next_due_date` is initialized with `agreed_settlement_date` and advances by the frequency on each paid installment. `remaining_balance` starts equal to the sale's `total_amount`.
 
 ### Fiado status (derived, NOT stored)
 
 Computed at read time from `next_due_date` and `remaining_balance`, compared against the current date in the store's timezone. UI labels in parentheses (pt-BR):
+
 - **Paid off** (UI: "quitado"): `remaining_balance <= 0`.
 - **Overdue** (UI: "em atraso"): `next_due_date < today` AND `remaining_balance > 0`.
 - **Due soon** (UI: "a vencer"): `next_due_date` within the next N days (suggest 7) AND `remaining_balance > 0`.
 - **Current** (UI: "em dia"): any other case with balance > 0.
 
+
+
 ### Financial summary figures (derived, computed on demand)
 
 No new table; everything is computed from `sales`, `sale_items`, and `fiado_accounts`:
+
 - **Profit on sales** = Σ `(unit_sale_price − unit_cost_price) × quantity` over all `sale_items`. (That is: sale price minus cost, summed over everything sold.)
 - **Total sold** = Σ `sales.total_amount`.
 - **Received (entries)** = Σ `total_amount` of immediate sales + Σ `(total_amount − remaining_balance)` of fiados.
@@ -183,12 +208,14 @@ No new table; everything is computed from `sales`, `sale_items`, and `fiado_acco
 
 ---
 
+
+
 ## 6. Folder structure
 
 A repository with two top-level folders (frontend and backend), each with its own deploy.
 
 ```
-inf-amily/                     # (brand displayed as: inf.amily)
+infamily/                     # (brand displayed as: infamily)
 ├── frontend/                  # Next.js (Vercel)
 │   ├── app/
 │   │   ├── (public)/
@@ -244,6 +271,8 @@ inf-amily/                     # (brand displayed as: inf.amily)
 
 ---
 
+
+
 ## 7. Pages
 
 The **Landing page** (`/`, public) is the brand's front door. In the MVP it contains the inf.amily identity, the tagline (UI, pt-BR) "por família – pra família", basic store info, a WhatsApp/contact button, and a **discreet admin access link** (to the login). It shows no internal data. It should be structured so it can later host a **product showcase** — but that showcase is **not built now** (see section 14).
@@ -264,42 +293,64 @@ The **dashboard** (`/dashboard`, protected) — the first screen after login: ov
 
 ---
 
+
+
 ## 8. Backend endpoints (FastAPI)
 
 All data endpoints require a valid Supabase token in `Authorization: Bearer <token>`. **There is no login endpoint on the backend** — login happens on the frontend against Supabase Auth.
 
 ### Inventory
-| Method | Route                     | Description                                                       |
-|--------|---------------------------|-------------------------------------------------------------------|
-| GET    | `/api/products`           | List items (with a low-stock indicator).                          |
-| POST   | `/api/products`           | Create an item (name, cost, sale price, quantity).                |
-| GET    | `/api/products/{id}`      | Item detail.                                                      |
-| PATCH  | `/api/products/{id}`      | Edit an item (including manual stock adjustment).                 |
-| DELETE | `/api/products/{id}`      | Remove an item (blocked/warned if it has sales history).          |
+
+
+| Method | Route                | Description                                              |
+| ------ | -------------------- | -------------------------------------------------------- |
+| GET    | `/api/products`      | List items (with a low-stock indicator).                 |
+| POST   | `/api/products`      | Create an item (name, cost, sale price, quantity).       |
+| GET    | `/api/products/{id}` | Item detail.                                             |
+| PATCH  | `/api/products/{id}` | Edit an item (including manual stock adjustment).        |
+| DELETE | `/api/products/{id}` | Remove an item (blocked/warned if it has sales history). |
+
+
+
 
 ### Sales
-| Method | Route                     | Description                                                                                 |
-|--------|---------------------------|---------------------------------------------------------------------------------------------|
-| GET    | `/api/sales`              | List sales (optional period filter).                                                        |
-| POST   | `/api/sales`              | Create a sale: items (product + quantity) + payment method + date. **In a transaction**: validate stock, deduct, snapshot prices, compute totals. If `payment_method = fiado`, also create the fiado record with the received terms. |
-| GET    | `/api/sales/{id}`         | Sale detail with items.                                                                     |
+
+
+| Method | Route             | Description                                                                                                                                                                                                                          |
+| ------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/api/sales`      | List sales (optional period filter).                                                                                                                                                                                                 |
+| POST   | `/api/sales`      | Create a sale: items (product + quantity) + payment method + date. **In a transaction**: validate stock, deduct, snapshot prices, compute totals. If `payment_method = fiado`, also create the fiado record with the received terms. |
+| GET    | `/api/sales/{id}` | Sale detail with items.                                                                                                                                                                                                              |
+
+
+
 
 ### Fiado
-| Method | Route                     | Description                                                                                |
-|--------|---------------------------|--------------------------------------------------------------------------------------------|
-| GET    | `/api/fiado`              | List fiados with derived status (clients / collection).                                    |
-| GET    | `/api/fiado/{id}`         | Detail: client, items taken, terms, balance, next date.                                    |
-| PATCH  | `/api/fiado/{id}`         | Edit client/terms of the fiado.                                                            |
-| POST   | `/api/fiado/{id}/pay`     | Record an installment payment: reduce the balance by the installment amount (never negative) and advance the next date if a balance remains. |
+
+
+| Method | Route                 | Description                                                                                                                                  |
+| ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/fiado`          | List fiados with derived status (clients / collection).                                                                                      |
+| GET    | `/api/fiado/{id}`     | Detail: client, items taken, terms, balance, next date.                                                                                      |
+| PATCH  | `/api/fiado/{id}`     | Edit client/terms of the fiado.                                                                                                              |
+| POST   | `/api/fiado/{id}/pay` | Record an installment payment: reduce the balance by the installment amount (never negative) and advance the next date if a balance remains. |
+
+
+
 
 ### Dashboard and Summary
-| Method | Route                     | Description                                                                        |
-|--------|---------------------------|------------------------------------------------------------------------------------|
-| GET    | `/api/dashboard`          | Overdue fiados + due soon + low/zero stock items.                                  |
-| GET    | `/api/summary`            | Financial summary: profit, total sold, received, to receive (optional period params). |
-| GET    | `/health`                 | Health check (not protected).                                                      |
+
+
+| Method | Route            | Description                                                                           |
+| ------ | ---------------- | ------------------------------------------------------------------------------------- |
+| GET    | `/api/dashboard` | Overdue fiados + due soon + low/zero stock items.                                     |
+| GET    | `/api/summary`   | Financial summary: profit, total sold, received, to receive (optional period params). |
+| GET    | `/health`        | Health check (not protected).                                                         |
+
 
 ---
+
+
 
 ## 9. Main frontend components
 
@@ -319,6 +370,8 @@ The **api client** (`lib/api.ts`) centralizes backend calls and attaches the JWT
 
 ---
 
+
+
 ## 10. Authentication flow
 
 Supabase Auth is the identity provider; the backend does not manage passwords. Entry happens through the public landing.
@@ -334,6 +387,8 @@ Supabase Auth is the identity provider; the backend does not manage passwords. E
 Only one authorized user: Yasmin's account is created once in the Supabase dashboard, and **new-user signup is disabled**.
 
 ---
+
+
 
 ## 11. Security rules
 
@@ -357,6 +412,8 @@ These cover inventory, sales, and client data.
 
 ---
 
+
+
 ## 12. Implementation roadmap
 
 Sequence prioritizing getting the inventory → sale → deduction cycle working early, because everything depends on inventory.
@@ -379,11 +436,13 @@ Sequence prioritizing getting the inventory → sale → deduction cycle working
 
 ---
 
+
+
 ## 13. MVP v1 (scope)
 
 What ships in the first release:
 
-1. Public inf.amily landing with the tagline "por família – pra família", basic info, contact/WhatsApp, and discreet admin access.
+1. Public infamily landing with the tagline "por família – pra família", basic info, contact/WhatsApp, and discreet admin access.
 2. Secure admin login (single user) via Supabase Auth.
 3. Inventory: create, list, and edit items with cost, sale price, and quantity.
 4. Immediate sales: select items, automatically deduct stock, record payment method and date.
@@ -395,6 +454,8 @@ What ships in the first release:
 All kept as simple as possible in screens and flows.
 
 ---
+
+
 
 ## 14. Future improvements
 
@@ -412,6 +473,8 @@ Deliberately deferred:
 10. **Multi-user / multi-store** and a **mobile app / PWA**.
 
 ---
+
+
 
 ## 15. What to avoid (keeping it from getting too complex)
 
@@ -442,6 +505,8 @@ A complexity brake — the development agent should actively resist the followin
 **Do not expose secrets in the frontend** — the secret key and connection string stay on the backend only.
 
 ---
+
+
 
 ## 16. Critical implementation notes (gotchas)
 
