@@ -2,15 +2,31 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const router = useRouter();
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setErrorMessage("");
 
-    console.log(email, password);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setErrorMessage("E-mail ou senha incorretos.");
+      return;
+    }
+
+    router.push("/dashboard");
   }
 
   return (
@@ -35,9 +51,13 @@ export default function LoginPage() {
       onChange={(event) => setPassword(event.target.value)}
       />
 
-      <button 
-      type="submit" 
+      <button
+      type="submit"
       >Entrar </button>
+
+      {errorMessage && (
+        <p className="mt-3 text-sm text-red-600">{errorMessage}</p>
+      )}
 
       </form>
 
