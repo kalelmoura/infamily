@@ -42,7 +42,7 @@ export default function LoginPage() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6 text-center">
 
-     <h1 className="text-2xl font-semibold tracking-tight"> Acesso Administrativo </h1>
+     <h1 className="text-2xl font-semibold tracking-tight">Acesso Administrativo</h1>
 
      {/* Native <form> so Enter submits and onSubmit fires handleSubmit above. */}
      <form onSubmit={handleSubmit}>
@@ -66,7 +66,7 @@ export default function LoginPage() {
 
       <button
       type="submit"
-      >Entrar </button>
+      >Entrar</button>
 
       {/* Only rendered once handleSubmit sets a non-empty errorMessage. */}
       {errorMessage && (
