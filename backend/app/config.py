@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     # server so the app runs out of the box with no .env file.
     frontend_origin: str = "http://localhost:3000"
 
+    # Supabase JWKS endpoint: where Supabase publishes the public keys used
+    # to verify access-token signatures. No default on purpose — auth cannot
+    # work without it, so the app should fail at startup (with a clear
+    # pydantic error) rather than fail confusingly on the first request.
+    supabase_jwks_url: str
+
 
 # Import this single instance wherever settings are needed:
 #   from app.config import settings

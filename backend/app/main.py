@@ -7,9 +7,10 @@ In Phase 0 it wires up CORS (so the Next.js frontend can call the API) and
 exposes a single health-check endpoint.
 """
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth import get_current_user
 from app.config import settings
 
 # title (inf.amily API) = the instance is my app and the API menas the backend
@@ -40,6 +41,19 @@ app.add_middleware(
 def health_check():
     """Liveness probe: confirms the service is up and serving requests."""
     return {"status": "ok"}
+
+
+# Protected test endpoint. `claims: dict = Depends(get_current_user)` tells
+# FastAPI: before running this function, call get_current_user and put its
+# return value in `claims`. If the dependency raises (no/invalid token),
+# this body never runs — the client just gets the 401.
+# /health above has no dependency, so it stays public (monitoring needs it).
+@app.get("/api/me")
+def read_me(claims: dict = Depends(get_current_user)):
+    """Returns the authenticated user's id, proving the token was accepted."""
+    # `sub` (subject) is the JWT's standard claim for "who this token is
+    # about" — for Supabase, the user's UUID in auth.users.
+    return {"user_id": claims["sub"]}
 
 # If i click on .get pressing command, there is a doc saying:
 
