@@ -25,6 +25,16 @@ class Settings(BaseSettings):
     # pydantic error) rather than fail confusingly on the first request.
     supabase_jwks_url: str
 
+    # Postgres connection string for SQLAlchemy's async engine. It MUST use
+    # the asyncpg driver — note the `+asyncpg` in the scheme:
+    #   postgresql+asyncpg://USER:PASSWORD@HOST:5432/postgres
+    # No default, for the same reason as supabase_jwks_url above: the app is
+    # useless without a database, so it should fail fast at startup (with a
+    # clear pydantic error) rather than limp along and break on the first
+    # query. Backend-only — this string is a secret, never expose it to the
+    # frontend.
+    database_url: str
+
 
 # Import this single instance wherever settings are needed:
 #   from app.config import settings
