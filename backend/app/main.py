@@ -28,7 +28,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# configuring the the add_middleware method
+# configuring the the add_middleware methods
 # app.add_middleware = calling a method (func) from app, the FastAPI class
 # CORSMiddleware = a class (blueprint for the CORS checkpoint)
 # CORS "checkpoint" checks in each incoming browser request, the CORS rules (basically passes though the middleware I installed), eg: "is this origin on the allow-list?" and adds the response headers that tell the browser "yes, this origin is permitted."
