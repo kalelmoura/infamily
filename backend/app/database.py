@@ -51,7 +51,7 @@ engine = create_async_engine(
 
 
 # --- The session factory ---------------------------------------------------
-# A *session* is one unit of work: it tracks the objects you load or add and
+# A *session* is one unit of work: it tracks the objects (products) you load or add and
 # batches the SQL that syncs them to the database. `async_sessionmaker` is a
 # factory — calling `AsyncSessionLocal()` produces a fresh session bound to
 # our engine. We build the factory once here and reuse it everywhere.

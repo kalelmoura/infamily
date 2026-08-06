@@ -1,7 +1,5 @@
-# Phase 0 dependencies only. More are added in their roadmap phases:
-#   Phase 1 (auth):      PyJWT  (verify Supabase tokens via JWKS)
-#   Phase 2+ (database): SQLAlchemy, asyncpg
-#   Phase 4 (fiado):     python-dateutil  (installment date math)
+# Dependencies are added in their roadmap phases:
+#   Phase 4 (fiado): python-dateutil  (installment date math)
 #
 # uvicorn is intentionally the plain build (not uvicorn[standard]) to avoid
 # compiled extras (uvloop/httptools/watchfiles) that may lack wheels on very
@@ -11,6 +9,10 @@ fastapi
 uvicorn
 pydantic-settings
 PyJWT[crypto]
-sqlalchemy
+# The [asyncio] extra pulls in greenlet, which SQLAlchemy's async layer needs
+# to bridge its (synchronous) internals to async I/O. Plain `sqlalchemy` does
+# not always install it — on Python 3.14 it did not, and every session close
+# raised "the greenlet library is required". Always use the extra for async.
+sqlalchemy[asyncio]
 asyncpg
 alembic
