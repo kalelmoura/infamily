@@ -35,6 +35,9 @@ export default function LoginPage() {
       return;
     }
 
+  const { data } = await supabase.auth.getSession();
+  console.log(data.session?.access_token);
+
     // Successful login: send the admin to the protected dashboard.
     router.push("/dashboard");
   }
