@@ -2,74 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
-
-/**
- * One row of `GET /api/products`, mirroring the backend's `ProductRead`.
- *
- * Note the prices are `string`, not `number`, and that is not a mistake:
- * the columns are NUMERIC, the schema types them as `Decimal`, and Pydantic
- * serialises a Decimal to a JSON *string* ("49.90") precisely so no value is
- * mangled by a float on the way out. We keep them as strings here and only
- * convert at the moment we format them for display.
- */
-type Product = {
-  id: string;
-  name: string;
-  cost_price: string;
-  sale_price: string;
-  stock_quantity: number;
-  created_at: string;
-  updated_at: string;
-};
-
-// pt-BR currency formatting: R$ 1.234,56 — dot for thousands, comma for
-// decimals. Built once at module scope because creating an Intl formatter is
-// comparatively expensive and this one never changes.
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
-function formatMoney(value: string): string {
-  return currencyFormatter.format(Number(value));
-}
-
-/**
- * Read a price typed by a human and return it as the backend wants it, or
- * `null` if it isn't usable.
- *
- * Brazilians type "49,90"; the API (and JavaScript's `Number`) expect a dot.
- * The return value is a *string* with two decimals, not a number: sent as a
- * string, Pydantic builds the Decimal from the exact digits we typed, with no
- * float rounding anywhere in between — the same reason the column is NUMERIC.
- *
- * Thousands separators are deliberately not accepted: "1.234,56" is ambiguous
- * with "1.234" and store prices don't need it. It fails validation loudly.
- */
-function parseMoneyInput(raw: string): string | null {
-  const normalized = raw.trim().replace(",", ".");
-  if (normalized === "") return null;
-
-  const value = Number(normalized);
-  // `Number("")` is 0 and `Number("abc")` is NaN — the emptiness check above
-  // and `isFinite` here together reject both.
-  if (!Number.isFinite(value) || value < 0) return null;
-
-  // Two decimals: what NUMERIC(10, 2) stores, and what the schema's
-  // `decimal_places=2` accepts. Sending 49.905 would be a 422.
-  return value.toFixed(2);
-}
-
-/** Same idea for the stock quantity, which must be a whole number >= 0. */
-function parseQuantityInput(raw: string): number | null {
-  const normalized = raw.trim();
-  if (normalized === "") return null;
-
-  const value = Number(normalized);
-  if (!Number.isInteger(value) || value < 0) return null;
-
-  return value;
-}
+// Money parsing and formatting moved to lib/format.ts once the vendas page
+// needed the same rules — two copies of money handling would eventually drift.
+import { formatMoney, parseMoneyInput, parseQuantityInput } from "@/lib/format";
+import type { Product } from "@/lib/types";
 
 /** Prefer the API's own message when we have one; otherwise say something useful. */
 function messageFrom(error: unknown, fallback: string): string {
