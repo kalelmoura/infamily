@@ -96,7 +96,7 @@ class ProductRead(BaseModel):
     """What the API returns for a product — the shape the frontend can rely on.
 
     Every endpoint converts to this schema before responding (never a raw ORM
-    object): the response then contains exactly these seven fields, whatever
+    object): the response then contains exactly these fields, whatever
     else the model may grow later.
     """
 
@@ -114,5 +114,6 @@ class ProductRead(BaseModel):
     cost_price: Decimal
     sale_price: Decimal
     stock_quantity: int
+    sold_quantity: int = 0
     created_at: datetime
     updated_at: datetime

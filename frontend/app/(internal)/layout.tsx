@@ -5,6 +5,7 @@ const navItems = [
   { href: "/estoque", label: "Estoque" },
   { href: "/vendas", label: "Vendas" },
   { href: "/fiado", label: "Fiado" },
+  { href: "/resumo", label: "Resumo" },
 ];
 
 export default function InternalLayout({

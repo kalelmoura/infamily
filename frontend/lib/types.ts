@@ -14,6 +14,7 @@ export type Product = {
   cost_price: string;
   sale_price: string;
   stock_quantity: number;
+  sold_quantity: number;
   created_at: string;
   updated_at: string;
 };
@@ -124,4 +125,13 @@ export type Dashboard = {
   overdue: DashboardOverdueFiado[];
   due_soon: DashboardDueSoonFiado[];
   low_stock: DashboardLowStockProduct[];
+};
+
+/** The complete `GET /api/summary` response. */
+export type Summary = {
+  total_sold: string;
+  total_cost: string;
+  total_profit: string;
+  received: string;
+  to_receive: string;
 };

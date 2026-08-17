@@ -277,7 +277,9 @@ export default function EstoquePage() {
                   </p>
                   <p className="mt-1 text-sm text-zinc-500">
                     {product.stock_quantity}{" "}
-                    {product.stock_quantity === 1 ? "unidade" : "unidades"}
+                    {product.stock_quantity === 1 ? "unidade" : "unidades"} ·{" "}
+                    {product.sold_quantity}{" "}
+                    {product.sold_quantity === 1 ? "vendido" : "vendidos"}
                   </p>
                 </div>
 

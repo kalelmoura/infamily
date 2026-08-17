@@ -20,13 +20,14 @@ Two conventions this file follows everywhere:
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.product import Product
+from app.models.sale import SaleItem
 from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
 
 router = APIRouter(
@@ -81,18 +82,39 @@ async def _get_product_or_404(db: AsyncSession, product_id: UUID) -> Product:
 # argument needed. A bare array is returned, exactly as the frontend expects.
 @router.get("")
 async def list_products(db: AsyncSession = Depends(get_db)) -> list[ProductRead]:
-    """List every product, alphabetically by name."""
+    """List every product, alphabetically by name, with total units sold."""
     # SQLAlchemy 2.0 style: build a `select()` statement, hand it to
     # `db.execute()`, then unpack the result. (The old 1.x `db.query(Product)`
     # API still exists but is legacy — and has no async equivalent.)
-    result = await db.execute(select(Product).order_by(Product.name))
-    # `.scalars()` again means "give me the Product objects, not (Product,)
-    # rows"; `.all()` materialises them into a list.
-    products = result.scalars().all()
+    sold_quantities = (
+        select(
+            SaleItem.product_id,
+            func.coalesce(func.sum(SaleItem.quantity), 0).label("sold_quantity"),
+        )
+        .group_by(SaleItem.product_id)
+        .subquery()
+    )
+
+    result = await db.execute(
+        select(
+            Product,
+            func.coalesce(sold_quantities.c.sold_quantity, 0).label(
+                "sold_quantity"
+            ),
+        )
+        .outerjoin(sold_quantities, sold_quantities.c.product_id == Product.id)
+        .order_by(Product.name)
+    )
+    rows = result.all()
 
     # No commit: this is a read. Closing the session (done by `get_db`) rolls
     # back the read-only transaction, which is free.
-    return [ProductRead.model_validate(product) for product in products]
+    return [
+        ProductRead.model_validate(product).model_copy(
+            update={"sold_quantity": int(sold_quantity)}
+        )
+        for product, sold_quantity in rows
+    ]
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
