@@ -44,3 +44,53 @@ export type Sale = {
   created_at: string;
   items: SaleItem[];
 };
+
+/** How often a fiado installment falls due — the backend's `Frequency` enum. */
+export type FiadoFrequency = "weekly" | "biweekly" | "monthly";
+
+/**
+ * The state of a fiado, as the backend derives it — never stored anywhere.
+ *
+ * It is computed per request from `next_due_date` and `remaining_balance`
+ * against today in São Paulo, which is why it arrives from the API instead of
+ * being worked out here: "today" in the store's timezone is the server's call,
+ * and the rule must not exist in two places.
+ */
+export type FiadoStatus = "overdue" | "due_soon" | "current" | "paid_off";
+
+/** One row of `GET /api/fiado` — the backend's `FiadoRead`. */
+export type Fiado = {
+  id: string;
+  sale_id: string;
+  customer_name: string;
+  frequency: FiadoFrequency;
+  installments_count: number;
+  installment_amount: string;
+  agreed_settlement_date: string;
+  next_due_date: string;
+  remaining_balance: string;
+  status: FiadoStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+/** One line of the sale behind a fiado — the backend's `FiadoDetailItemRead`. */
+export type FiadoDetailItem = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_sale_price: string;
+};
+
+/**
+ * `GET /api/fiado/{id}` — a fiado plus the sale it came from.
+ *
+ * Extends `Fiado` for the same reason the Python schema does: the detail screen
+ * shows everything the list shows, and then what the person took.
+ */
+export type FiadoDetail = Fiado & {
+  sale_date: string;
+  sale_total: string;
+  items: FiadoDetailItem[];
+};
