@@ -36,7 +36,9 @@ export default function ResumoPage() {
       setSummary(data);
       setErrorMessage("");
     } catch (error) {
-      setErrorMessage(messageFrom(error, "Não foi possível carregar o resumo."));
+      setErrorMessage(
+        messageFrom(error, "Não foi possível carregar o dashboard."),
+      );
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +67,7 @@ export default function ResumoPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Resumo</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
       <p className="mt-2 text-sm text-zinc-500">
         Total lucro conta a margem de tudo que foi vendido, incluindo fiado
         ainda não recebido. Recebido é o dinheiro que já entrou. Total custo é

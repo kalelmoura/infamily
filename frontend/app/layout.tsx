@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "inf.amily",
-  description: "Sistema interno da inf.amily — por família, pra família.",
+  title: "In Family",
+  description: "Sistema interno da In Family — por família pra família.",
 };
 
 export default function RootLayout({
