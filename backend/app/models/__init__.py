@@ -12,5 +12,6 @@ whole schema visible. Add every new model to this file as it is created.
 """
 
 from app.models.product import Product
+from app.models.sale import Sale, SaleItem
 
-__all__ = ["Product"]
+__all__ = ["Product", "Sale", "SaleItem"]

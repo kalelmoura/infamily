@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import get_current_user
 from app.config import settings
-from app.routers import products
+from app.routers import products, sales
 
 # title (inf.amily API) = the instance is my app and the API menas the backend
 app = FastAPI(title="inf.amily API") 
@@ -43,6 +43,7 @@ app.add_middleware(
 # dependency, so there is nothing to repeat here — one line per module as the
 # API grows (sales, fiado, summary).
 app.include_router(products.router)
+app.include_router(sales.router)
 
 
 @app.get("/health")

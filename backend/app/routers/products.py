@@ -21,6 +21,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -184,9 +185,33 @@ async def delete_product(
     """Delete a product."""
     product = await _get_product_or_404(db, product_id)
 
-    # TODO (Phase 3, sales): the spec wants deletion blocked or warned when the
-    # product has sales history. Once `sale_items` exists and references
-    # products, add that check here — history must never be rewritten by a
-    # cascade.
-    await db.delete(product)
-    await db.commit()
+    # The spec's "blocked if it has sales history" rule. The guarantee itself
+    # lives in the database: `sale_items.product_id` is declared ON DELETE
+    # RESTRICT, so Postgres refuses the DELETE outright and history can never be
+    # rewritten by a cascade — no matter who is doing the deleting.
+    #
+    # What this block adds is a *civil* answer. Without it the driver's foreign
+    # key violation would bubble up as an unhandled 500, and Yasmin would see a
+    # crash where she should see an explanation.
+    #
+    # Checking first with a `SELECT ... WHERE EXISTS` instead would be a race:
+    # a sale could be recorded between the check and the delete. Letting the
+    # constraint decide is both simpler and correct under concurrency.
+    try:
+        await db.delete(product)
+        await db.commit()
+    except IntegrityError as error:
+        # The transaction is aborted once Postgres rejects a statement; roll it
+        # back explicitly so the session is reusable and the connection returns
+        # to the pool clean.
+        await db.rollback()
+        # 409 Conflict: the request is valid, but the resource's current state
+        # (it has sales) forbids it. Not 400 — nothing about the request is
+        # wrong — and not 403, which would be about permissions.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Este produto já foi vendido e não pode ser excluído. "
+                "Para tirá-lo da loja, defina a quantidade em estoque como 0."
+            ),
+        ) from error
