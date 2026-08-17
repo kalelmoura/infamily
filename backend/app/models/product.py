@@ -33,6 +33,23 @@ class Product(Base):
     # The physical table name in Postgres.
     __tablename__ = "products"
 
+    # Fetch server-generated values in the same statement that writes them,
+    # using `UPDATE ... RETURNING`.
+    #
+    # Without this, `updated_at` below is a problem after every UPDATE. Its
+    # value comes from a SQL expression (`now()`), so SQLAlchemy cannot know
+    # what the database computed and marks the attribute *expired* — the next
+    # read of `product.updated_at` fires a lazy SELECT to find out. In async
+    # code that reload cannot run: it is I/O attempted outside an `await`, and
+    # it fails (as a MissingGreenlet, or as a Pydantic "field required" when a
+    # response schema is the one touching the attribute).
+    #
+    # `expire_on_commit=False` does not help here — that setting stops commit
+    # from expiring everything, but this attribute was expired by the flush,
+    # for a different and legitimate reason. RETURNING is the fix: one
+    # statement, no second round-trip, nothing left expired.
+    __mapper_args__ = {"eager_defaults": True}
+
     # Table-level constraints live here (as opposed to column-level ones).
     # These CHECKs are enforced by *Postgres itself*: even if a bug in our
     # Python code tried to write a negative price or stock, the database would

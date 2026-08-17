@@ -1,5 +1,4 @@
-# Dependencies are added in their roadmap phases:
-#   Phase 4 (fiado): python-dateutil  (installment date math)
+# Dependencies are added in their roadmap phases.
 #
 # uvicorn is intentionally the plain build (not uvicorn[standard]) to avoid
 # compiled extras (uvloop/httptools/watchfiles) that may lack wheels on very
@@ -16,3 +15,7 @@ PyJWT[crypto]
 sqlalchemy[asyncio]
 asyncpg
 alembic
+# Calendar-aware date math for fiado installments. Adding "one month" to a due
+# date is not adding 30 days — relativedelta knows that 31 Jan + 1 month is the
+# last day of February, which naive arithmetic gets wrong every single time.
+python-dateutil

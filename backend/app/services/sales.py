@@ -2,10 +2,9 @@
 
 This lives in a service, not in the router, for the reason set out in
 `routers/products.py`: products are straight CRUD and belong in the router, but
-recording a sale means validating stock, deducting it, snapshotting prices and
-computing totals — rules that have nothing to do with HTTP. Phase 4 adds a fiado
-record to this same transaction, and that logic needs somewhere to live that is
-not a request handler.
+recording a sale means validating stock, deducting it, snapshotting prices,
+computing totals and — for a credit sale — opening the fiado account, rules that
+have nothing to do with HTTP.
 
 Nothing in this module imports FastAPI. It raises `SaleError` with a message
 already written in Portuguese, and the router decides that means 400. That
@@ -16,7 +15,8 @@ a background job or a test with no web server anywhere in sight.
 `await db.commit()` at the very end is the only place anything is persisted. Any
 exception before it — a validation failure, a lost connection, a bug — leaves
 the session with uncommitted changes, and closing it rolls everything back. Stock
-is never decremented "halfway".
+is never decremented "halfway", and a fiado sale can never leave the store with
+the stock gone and no record of the debt.
 """
 
 from collections import defaultdict
@@ -28,14 +28,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
 from app.models.sale import Sale, SaleItem
-from app.schemas.sale import PaymentMethod, SaleCreate
+from app.schemas.sale import SaleCreate
+from app.services.fiado import build_fiado_account
 
 
 class SaleError(Exception):
     """A sale that cannot be recorded, with a message safe to show the user.
 
-    One class for every rejection reason (unknown product, insufficient stock,
-    fiado not yet supported) because they all mean the same thing to the caller:
+    One class for every rejection reason (unknown product, insufficient stock)
+    because they all mean the same thing to the caller:
     the request described a sale that cannot happen, and the message says why.
     Splitting it into a hierarchy would buy nothing while there is exactly one
     handler.
@@ -47,18 +48,6 @@ async def create_sale(db: AsyncSession, payload: SaleCreate) -> Sale:
 
     Raises `SaleError` if the sale is not possible, having written nothing.
     """
-    # --- Fiado is not wired up yet ----------------------------------------
-    # `fiado` is a valid payment method in the spec and in the enum, but the
-    # `fiado_accounts` table does not exist until Phase 4. Recording the sale
-    # anyway would deduct stock and book the revenue with nothing anywhere
-    # tracking that the money is owed — an invisible debt. Refusing is the
-    # honest failure. (Phase 4: replace this with creating the fiado record
-    # inside this same transaction.)
-    if payload.payment_method is PaymentMethod.FIADO:
-        raise SaleError(
-            "Vendas fiado ainda não estão disponíveis. Escolha outra forma de pagamento."
-        )
-
     # --- Aggregate the requested quantity per product ----------------------
     # The same product may legitimately appear on two lines — say two units at
     # full price and one discounted. Validating each line on its own would then
@@ -179,10 +168,28 @@ async def create_sale(db: AsyncSession, payload: SaleCreate) -> Sale:
     # with it. Still no SQL.
     db.add(sale)
 
+    # --- The fiado record --------------------------------------------------
+    # Only for a credit sale. `payload.fiado` is guaranteed to be present
+    # exactly when `payment_method` is fiado — the schema's model validator
+    # enforces both halves of that, so there is no need to re-check the method
+    # here; the presence of the terms *is* the condition.
+    #
+    # This is the reason the whole function is one transaction. The balance is
+    # computed from `total_amount`, the figure the server just derived from
+    # products it holds row locks on — never from anything the client sent.
+    if payload.fiado is not None:
+        # Staged explicitly rather than through a cascade: `FiadoAccount.sale`
+        # is a one-directional many-to-one (no `Sale.fiado` collection to
+        # cascade from). Because the relationship is set, SQLAlchemy still
+        # INSERTs the sale first and fills `sale_id` with the id Postgres
+        # generated for it.
+        db.add(build_fiado_account(sale, payload.fiado))
+
     # The one and only commit. Everything above — the stock decrements, the
-    # sale, its items — becomes durable here, together, or not at all. The row
-    # locks taken by FOR UPDATE are released at this point, letting any sale
-    # blocked behind us proceed against the stock we just wrote.
+    # sale, its items, and the fiado account if there is one — becomes durable
+    # here, together, or not at all. The row locks taken by FOR UPDATE are
+    # released at this point, letting any sale blocked behind us proceed against
+    # the stock we just wrote.
     await db.commit()
 
     return sale
