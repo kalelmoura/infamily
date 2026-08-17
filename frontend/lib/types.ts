@@ -94,3 +94,34 @@ export type FiadoDetail = Fiado & {
   sale_total: string;
   items: FiadoDetailItem[];
 };
+
+/** One overdue fiado row in `GET /api/dashboard`. */
+export type DashboardOverdueFiado = {
+  id: string;
+  customer_name: string;
+  next_due_date: string;
+  remaining_balance: string;
+  days_overdue: number;
+};
+
+/** One due-soon fiado row in `GET /api/dashboard`. */
+export type DashboardDueSoonFiado = {
+  id: string;
+  customer_name: string;
+  next_due_date: string;
+  remaining_balance: string;
+};
+
+/** One low-stock product row in `GET /api/dashboard`. */
+export type DashboardLowStockProduct = {
+  id: string;
+  name: string;
+  stock_quantity: number;
+};
+
+/** The complete `GET /api/dashboard` response. */
+export type Dashboard = {
+  overdue: DashboardOverdueFiado[];
+  due_soon: DashboardDueSoonFiado[];
+  low_stock: DashboardLowStockProduct[];
+};

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import {
   formatCents,
@@ -56,6 +57,24 @@ function StatusBadge({ status }: { status: FiadoStatus }) {
 }
 
 export default function FiadoPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
+          <p className="text-sm text-zinc-500">Carregando…</p>
+        </main>
+      }
+    >
+      <FiadoPageContent />
+    </Suspense>
+  );
+}
+
+function FiadoPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const querySelectedId = searchParams.get("id");
+
   // --- The list -----------------------------------------------------------
   const [fiados, setFiados] = useState<Fiado[]>([]);
   // Starts true: the first fetch is already on its way when the page paints, so
@@ -109,20 +128,41 @@ export default function FiadoPage() {
     })();
   }, [loadFiados]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      // Keep every state update in this effect after an await, matching the
+      // pattern used by the other data-loading effects in this repo.
+      await Promise.resolve();
+      if (cancelled) return;
+
+      if (querySelectedId === null) {
+        setSelectedId(null);
+        setDetail(null);
+        setDetailError("");
+        setIsLoadingDetail(false);
+        return;
+      }
+
+      setSelectedId(querySelectedId);
+      setDetail(null);
+      setDetailError("");
+      setIsLoadingDetail(true);
+      void loadDetail(querySelectedId);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadDetail, querySelectedId]);
+
   function handleOpen(fiado: Fiado) {
-    setSelectedId(fiado.id);
-    // Cleared rather than left showing the previous customer's numbers, which
-    // would be a genuinely dangerous thing to misread on a collection screen.
-    setDetail(null);
-    setDetailError("");
-    setIsLoadingDetail(true);
-    void loadDetail(fiado.id);
+    router.push(`/fiado?id=${fiado.id}`);
   }
 
   function handleBack() {
-    setSelectedId(null);
-    setDetail(null);
-    setDetailError("");
+    router.push("/fiado");
   }
 
   async function handlePay() {
