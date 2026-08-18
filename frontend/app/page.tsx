@@ -256,15 +256,8 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <div className={styles.footerTop}>
-          <Link href="/" className={styles.footerBrand}>
-            In family
-          </Link>
-          <p>Moda feminina, com carinho para a vida real.</p>
-        </div>
-
         <div className={styles.footerBottom}>
-          <span>© {new Date().getFullYear()}</span>
+          <span>© {new Date().getFullYear()} In family</span>
           <Link href="/login" className={styles.adminLink}>
             Acesso administrativo
           </Link>
