@@ -176,13 +176,6 @@
   animation: fadeUp 800ms 230ms both;
 }
 
-.heroContent > p {
-  margin: 0;
-  color: var(--ink-soft);
-  font-size: clamp(1rem, 1.3vw, 1.15rem);
-  line-height: 1.75;
-}
-
 .primaryButton,
 .instagramButton,
 .secondaryButton {
@@ -225,7 +218,7 @@
 
 .heroActions {
   display: grid;
-  margin-top: 30px;
+  margin-top: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
@@ -646,7 +639,24 @@
   }
 
   .hero {
+    display: flex;
     padding-top: 72px;
+    flex-direction: column;
+  }
+
+  .heroIntro {
+    display: contents;
+  }
+
+  .heroHeading {
+    order: 1;
+  }
+
+  .heroContent {
+    width: 100%;
+    margin-top: 24px;
+    padding-bottom: 0;
+    order: 3;
   }
 
   .hero::before {
@@ -676,8 +686,9 @@
   }
 
   .heroPhoto {
-    margin-top: 48px;
+    margin-top: 44px;
     aspect-ratio: 1.3 / 1;
+    order: 2;
   }
 
   .heroImage {

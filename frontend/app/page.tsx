@@ -158,12 +158,6 @@ export default function Home() {
             </div>
 
             <div className={styles.heroContent}>
-              <p>
-                Peças escolhidas com carinho para acompanhar mulheres e suas
-                famílias nos dias comuns, nos encontros e em tudo que acontece
-                no meio.
-              </p>
-
               <div className={styles.heroActions}>
                 <a
                   href={whatsappHref}
