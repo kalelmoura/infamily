@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import Link from "next/link";
 import { Newsreader } from "next/font/google";
 
@@ -21,6 +21,15 @@ const whatsappHref = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
 const instagramHref =
   process.env.NEXT_PUBLIC_INSTAGRAM_URL ??
   "https://www.instagram.com/inf.amily/";
+const heroImageSizes = "(max-width: 768px) 100vw, 94vw";
+const {
+  props: { srcSet: mobileHeroImageSrcSet },
+} = getImageProps({
+  src: "/images/infamily-family-hero-v2.png",
+  alt: "",
+  fill: true,
+  sizes: heroImageSizes,
+});
 
 const values = [
   {
@@ -158,6 +167,12 @@ export default function Home() {
             </div>
 
             <div className={styles.heroContent}>
+              <p>
+                Peças escolhidas com carinho para acompanhar mulheres e suas
+                famílias nos dias comuns, nos encontros e em tudo que acontece
+                no meio.
+              </p>
+
               <div className={styles.heroActions}>
                 <a
                   href={whatsappHref}
@@ -184,14 +199,22 @@ export default function Home() {
           </div>
 
           <figure className={styles.heroPhoto}>
-            <Image
-              src="/images/infamily-family-hero-v2.png"
-              alt="Família reunida e sorrindo em uma varanda iluminada"
-              fill
-              priority
-              sizes="(max-width: 768px) 100vw, 94vw"
-              className={styles.heroImage}
-            />
+            <picture>
+              <source
+                media="(max-width: 600px)"
+                srcSet={mobileHeroImageSrcSet}
+                sizes={heroImageSizes}
+              />
+              <Image
+                src="/images/infamily-family-hero.png"
+                alt="Família reunida e sorrindo em uma varanda iluminada"
+                fill
+                loading="eager"
+                fetchPriority="high"
+                sizes={heroImageSizes}
+                className={styles.heroImage}
+              />
+            </picture>
             <div className={styles.photoShade} aria-hidden="true" />
             <figcaption className={styles.photoCaption}>
               <span aria-hidden="true" />
@@ -250,8 +273,20 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
+        <div className={styles.footerTop}>
+          <Link href="/" className={styles.footerBrand}>
+            In family
+          </Link>
+          <p>Moda feminina, com carinho para a vida real.</p>
+        </div>
+
         <div className={styles.footerBottom}>
-          <span>© {new Date().getFullYear()} In family</span>
+          <span className={styles.footerCopyrightDesktop}>
+            © {new Date().getFullYear()}
+          </span>
+          <span className={styles.footerCopyrightMobile}>
+            © {new Date().getFullYear()} In family
+          </span>
           <Link href="/login" className={styles.adminLink}>
             Acesso administrativo
           </Link>
