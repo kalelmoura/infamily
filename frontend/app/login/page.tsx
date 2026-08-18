@@ -78,7 +78,7 @@ export default function LoginPage() {
       }
 
       // Replace keeps the login screen out of the browser history after entry.
-      router.replace("/dashboard");
+      router.replace("/painel");
     } catch {
       setErrorMessage(
         "Não foi possível entrar. Verifique sua conexão e tente novamente.",

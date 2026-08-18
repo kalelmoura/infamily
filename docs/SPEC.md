@@ -36,7 +36,7 @@ The system has a public part (landing page) and an internal part protected by lo
 
 **Fiado (store credit / installments; UI: "Fiado" / "Clientes").** When a sale is on credit, besides deducting stock the system records the debt: the person's name, the items taken, the agreed settlement date, the payment frequency (weekly, biweekly, or monthly), and the number of installments. The owner tracks who is overdue and marks installments as paid. In practice this is the store's "clients" view — the list of who bought and what they owe.
 
-**Financial summary (UI: "Resumo").** Automatically tallies entries (money received) and profit (sale price minus cost, over what was sold), plus what is still to be received from fiado.
+**Financial summary (UI: "Métricas").** Automatically tallies entries (money received) and profit (sale price minus cost, over what was sold), plus what is still to be received from fiado.
 
 ### Central decision: a Sale and a Fiado are the same underlying event
 
@@ -222,7 +222,7 @@ infamily/                     # (brand displayed as: infamily)
 │   │   │   └── page.tsx               # inf.amily landing (/)
 │   │   ├── (internal)/                # Login-protected group
 │   │   │   ├── layout.tsx             # Session guard + navigation
-│   │   │   ├── dashboard/page.tsx     # Overdue + due soon + low stock
+│   │   │   ├── painel/page.tsx        # Overdue + due soon + low stock
 │   │   │   ├── estoque/
 │   │   │   │   ├── page.tsx           # Item list
 │   │   │   │   ├── nova/page.tsx      # Create item
@@ -277,9 +277,9 @@ infamily/                     # (brand displayed as: infamily)
 
 The **Landing page** (`/`, public) is the brand's front door. In the MVP it contains the inf.amily identity, the tagline (UI, pt-BR) "por família – pra família", basic store info, a WhatsApp/contact button, and a **discreet admin access link** (to the login). It shows no internal data. It should be structured so it can later host a **product showcase** — but that showcase is **not built now** (see section 14).
 
-The **login screen** (`/login`, public) — admin login with email and password and a sign-in button. Reached from the discreet link on the landing. On success it redirects to the dashboard.
+The **login screen** (`/login`, public) — admin login with email and password and a sign-in button. Reached from the discreet link on the landing. On success it redirects to the internal home.
 
-The **dashboard** (`/dashboard`, protected) — the first screen after login: overdue fiados at the top (red), then fiados due soon, and a simple low/zero stock notice. No charts.
+The **internal home** (`/painel`, protected) — the first screen after login: overdue fiados at the top (red), then fiados due soon, and a simple low/zero stock notice. No charts. `/dashboard` is retained only as a compatibility redirect to `/painel`.
 
 **Inventory** — item list (`/estoque`) showing name, sale price, and quantity (highlighting low stock); create (`/estoque/nova`) with name, cost, sale price, and quantity; detail/edit (`/estoque/[id]`) of the same fields.
 
@@ -287,7 +287,7 @@ The **dashboard** (`/dashboard`, protected) — the first screen after login: ov
 
 **Fiado / clients** — fiado list (`/fiado`), the clients/collection screen: who owes, status (overdue/due soon/paid off), next date, and balance; detail (`/fiado/[id]`): items taken, terms, balance, next date, and the "mark installment as paid" button.
 
-**Financial summary** (`/resumo`, protected) — four direct numbers: profit on sales, total sold, received (entries), and to receive. Optional simple period filter over sales.
+**Financial summary** (UI: "Métricas", `/resumo`, protected) — five direct numbers: total sold, total cost, total profit, received (entries), and to receive. Optional simple period filter over sales.
 
 > All user-facing labels, titles, buttons, and messages on these screens are in Brazilian Portuguese.
 
