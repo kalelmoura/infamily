@@ -50,7 +50,8 @@ def _to_fiado_read(fiado: FiadoAccount, today: date) -> FiadoRead:
     return FiadoRead(
         id=fiado.id,
         sale_id=fiado.sale_id,
-        customer_name=fiado.customer_name,
+        client_id=fiado.sale.client_id,
+        client_name=fiado.sale.client.full_name,
         frequency=fiado.frequency,
         installments_count=fiado.installments_count,
         installment_amount=fiado.installment_amount,
@@ -78,7 +79,11 @@ async def list_fiados(db: AsyncSession = Depends(get_db)) -> list[FiadoRead]:
     costs nothing; if the fiado list ever grows past what one screen can page
     through, this is the trade to revisit.
     """
-    result = await db.execute(select(FiadoAccount))
+    result = await db.execute(
+        select(FiadoAccount).options(
+            selectinload(FiadoAccount.sale).selectinload(Sale.client)
+        )
+    )
     fiados = result.scalars().all()
 
     # One `today` for the whole listing: computing it per row would let a
@@ -106,6 +111,7 @@ async def get_fiado(
         select(FiadoAccount)
         .where(FiadoAccount.id == fiado_id)
         .options(
+            selectinload(FiadoAccount.sale).selectinload(Sale.client),
             selectinload(FiadoAccount.sale)
             .selectinload(Sale.items)
             .selectinload(SaleItem.product)
@@ -160,7 +166,10 @@ async def pay_installment(
     # twice for one installment. The second request now waits here and, on
     # resuming, re-reads the balance the first one committed.
     result = await db.execute(
-        select(FiadoAccount).where(FiadoAccount.id == fiado_id).with_for_update()
+        select(FiadoAccount)
+        .where(FiadoAccount.id == fiado_id)
+        .options(selectinload(FiadoAccount.sale).selectinload(Sale.client))
+        .with_for_update()
     )
     fiado = result.scalar_one_or_none()
 

@@ -26,6 +26,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants import WALK_IN_CLIENT_ID
+from app.models.client import Client
 from app.models.product import Product
 from app.models.sale import Sale, SaleItem
 from app.schemas.sale import SaleCreate
@@ -48,6 +50,28 @@ async def create_sale(db: AsyncSession, payload: SaleCreate) -> Sale:
 
     Raises `SaleError` if the sale is not possible, having written nothing.
     """
+    # --- Validate the client before touching stock -------------------------
+    # A key-share lock keeps the client from being deleted between this check
+    # and the sale INSERT while still allowing other sales for the same client
+    # to proceed concurrently. The foreign key remains the final guarantee.
+    client_result = await db.execute(
+        select(Client)
+        .where(Client.id == payload.client_id)
+        .with_for_update(read=True, key_share=True)
+    )
+    client = client_result.scalar_one_or_none()
+
+    if client is None:
+        raise SaleError(
+            "Cliente não encontrado. Atualize a lista de clientes e tente novamente."
+        )
+
+    if payload.fiado is not None and client.id == WALK_IN_CLIENT_ID:
+        raise SaleError(
+            "Uma venda no fiado precisa de um cliente cadastrado. "
+            "Selecione ou adicione um cliente."
+        )
+
     # --- Aggregate the requested quantity per product ----------------------
     # The same product may legitimately appear on two lines — say two units at
     # full price and one discounted. Validating each line on its own would then
@@ -111,6 +135,7 @@ async def create_sale(db: AsyncSession, payload: SaleCreate) -> Sale:
 
     # --- Build the sale ----------------------------------------------------
     sale = Sale(
+        client=client,
         sale_date=payload.sale_date,
         # `PaymentMethod` is a StrEnum, so its members *are* strings — this goes
         # into the TEXT column as "dinheiro"/"pix"/"cartao" with no conversion.

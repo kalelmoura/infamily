@@ -76,6 +76,7 @@ class SaleCreate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    client_id: UUID
     sale_date: date
     payment_method: PaymentMethod
 
@@ -108,7 +109,7 @@ class SaleCreate(BaseModel):
         """
         if self.payment_method is PaymentMethod.FIADO and self.fiado is None:
             raise ValueError(
-                "Informe os dados do fiado (cliente, frequência, número de "
+                "Informe os dados do fiado (frequência, número de "
                 "parcelas e data combinada)."
             )
 
@@ -150,6 +151,8 @@ class SaleRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    client_id: UUID
+    client_name: str
     sale_date: date
     payment_method: PaymentMethod
     total_amount: Decimal

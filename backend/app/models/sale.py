@@ -4,7 +4,7 @@ Maps the `sales` and `sale_items` tables from the spec (section 5). Every item
 that leaves the store is a sale, whether it was paid immediately or taken on
 fiado — that single idea is what keeps stock, history and profit consistent.
 
-Two things here are load-bearing and easy to get wrong:
+Three things here are load-bearing and easy to get wrong:
 
   * **Prices are snapshotted onto the line item.** `unit_sale_price` and
     `unit_cost_price` record what the item sold for *at that moment*. If Yasmin
@@ -15,6 +15,9 @@ Two things here are load-bearing and easy to get wrong:
     a sale should take its line items with it (CASCADE) — they have no meaning
     on their own. Deleting a *product* that has ever been sold must be refused
     (RESTRICT), because that would erase history.
+  * **Every sale belongs to a client.** Immediate sales use either a registered
+    client or the protected walk-in client; fiado sales require a real client.
+    The client FK is RESTRICT so purchase history cannot be orphaned.
 """
 
 import uuid
@@ -36,6 +39,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.models.client import Client
 from app.models.product import Product
 
 
@@ -67,6 +71,17 @@ class Sale(Base):
         server_default=text("gen_random_uuid()"),
     )
 
+    # ON DELETE RESTRICT keeps a client with purchase history from being
+    # removed. There is deliberately no database default: the sale API must
+    # make the client choice explicit, even though the UI defaults immediate
+    # sales to the seeded walk-in client.
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("clients.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+
     # A DATE, not a timestamp: the business fact is "which day did this sale
     # happen", and the owner may record yesterday's sale this morning. Keeping
     # it date-only also sidesteps a timezone question the summary would
@@ -86,7 +101,12 @@ class Sale(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    # --- Relationship ------------------------------------------------------
+    # --- Relationships -----------------------------------------------------
+    client: Mapped[Client] = relationship(
+        back_populates="sales",
+        lazy="raise",
+    )
+
     # The Python-side link to the line items. This is ORM convenience, not a
     # database column — the actual link is the `sale_id` FK on the other table.
     #

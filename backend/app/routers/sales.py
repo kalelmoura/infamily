@@ -43,6 +43,8 @@ def _to_sale_read(sale: Sale) -> SaleRead:
     """
     return SaleRead(
         id=sale.id,
+        client_id=sale.client_id,
+        client_name=sale.client.full_name,
         sale_date=sale.sale_date,
         payment_method=sale.payment_method,
         total_amount=sale.total_amount,
@@ -102,7 +104,10 @@ async def list_sales(db: AsyncSession = Depends(get_db)) -> list[SaleRead]:
     # since `lazy="raise"` refuses to load these relationships on demand.
     result = await db.execute(
         select(Sale)
-        .options(selectinload(Sale.items).selectinload(SaleItem.product))
+        .options(
+            selectinload(Sale.client),
+            selectinload(Sale.items).selectinload(SaleItem.product),
+        )
         # `sale_date` is the business ordering; `created_at` breaks ties within
         # a single day, so two sales recorded on the same date still come back
         # newest-first and in a stable order.
@@ -122,7 +127,10 @@ async def get_sale(
     result = await db.execute(
         select(Sale)
         .where(Sale.id == sale_id)
-        .options(selectinload(Sale.items).selectinload(SaleItem.product))
+        .options(
+            selectinload(Sale.client),
+            selectinload(Sale.items).selectinload(SaleItem.product),
+        )
     )
     sale = result.scalar_one_or_none()
 

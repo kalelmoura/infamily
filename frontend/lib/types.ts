@@ -19,6 +19,20 @@ export type Product = {
   updated_at: string;
 };
 
+/** One client profile returned by `GET /api/clients`. */
+export type Client = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  phone: string;
+  social_handle: string | null;
+  notes: string | null;
+  is_walk_in: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 /** The payment methods the backend accepts (its `PaymentMethod` enum). */
 export type PaymentMethod = "dinheiro" | "pix" | "cartao" | "fiado";
 
@@ -37,6 +51,8 @@ export type SaleItem = {
 /** One recorded sale — the backend's `SaleRead`. */
 export type Sale = {
   id: string;
+  client_id: string;
+  client_name: string;
   // A plain date, "YYYY-MM-DD" — no time, no timezone.
   sale_date: string;
   payment_method: PaymentMethod;
@@ -63,7 +79,8 @@ export type FiadoStatus = "overdue" | "due_soon" | "current" | "paid_off";
 export type Fiado = {
   id: string;
   sale_id: string;
-  customer_name: string;
+  client_id: string;
+  client_name: string;
   frequency: FiadoFrequency;
   installments_count: number;
   installment_amount: string;
@@ -99,7 +116,7 @@ export type FiadoDetail = Fiado & {
 /** One overdue fiado row in `GET /api/dashboard`. */
 export type DashboardOverdueFiado = {
   id: string;
-  customer_name: string;
+  client_name: string;
   next_due_date: string;
   remaining_balance: string;
   days_overdue: number;
@@ -108,7 +125,7 @@ export type DashboardOverdueFiado = {
 /** One due-soon fiado row in `GET /api/dashboard`. */
 export type DashboardDueSoonFiado = {
   id: string;
-  customer_name: string;
+  client_name: string;
   next_due_date: string;
   remaining_balance: string;
 };
@@ -125,6 +142,30 @@ export type Dashboard = {
   overdue: DashboardOverdueFiado[];
   due_soon: DashboardDueSoonFiado[];
   low_stock: DashboardLowStockProduct[];
+};
+
+/** One product line in a client's purchase history. */
+export type ClientSaleItem = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_sale_price: string;
+};
+
+/** One sale in a client's purchase history. */
+export type ClientSale = {
+  id: string;
+  sale_date: string;
+  payment_method: PaymentMethod;
+  total_amount: string;
+  items: ClientSaleItem[];
+};
+
+/** `GET /api/clients/{id}` — profile, purchases, and open fiado total. */
+export type ClientDetail = Client & {
+  sales_history: ClientSale[];
+  outstanding_fiado_balance: string;
 };
 
 /** The complete `GET /api/summary` response. */

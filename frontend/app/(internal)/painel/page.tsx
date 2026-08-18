@@ -148,7 +148,7 @@ function OverdueSection({ items }: { items: DashboardOverdueFiado[] }) {
                 >
                   <div className={styles.itemContent}>
                     <div className={styles.itemTopline}>
-                      <p className={styles.itemName}>{item.customer_name}</p>
+                      <p className={styles.itemName}>{item.client_name}</p>
                       <p className={styles.itemValue}>
                         {formatMoney(item.remaining_balance)}
                       </p>
@@ -194,7 +194,7 @@ function DueSoonSection({ items }: { items: DashboardDueSoonFiado[] }) {
                 <Link href={`/fiado?id=${item.id}`} className={styles.itemLink}>
                   <div className={styles.itemContent}>
                     <div className={styles.itemTopline}>
-                      <p className={styles.itemName}>{item.customer_name}</p>
+                      <p className={styles.itemName}>{item.client_name}</p>
                       <p className={styles.itemValue}>
                         {formatMoney(item.remaining_balance)}
                       </p>

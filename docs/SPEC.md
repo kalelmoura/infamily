@@ -2,7 +2,7 @@
 
 ## Inventory, Sales, Fiado, and Financial Summary
 
-> Store project: **infamily** (Yasmin's clothing store). An internal management tool with four modules — Inventory, Sales, Fiado, and Financial summary — protected by login, plus a public landing page. **This document contains no code.** It describes what to build and how, leaving implementation to the development phase.
+> Store project: **infamily** (Yasmin's clothing store). An internal management tool for inventory, sales, clients, fiado, daily attention, and financial metrics, protected by login, plus a public landing page. **This document contains no code.** It describes what to build and how, leaving implementation to the development phase.
 
 > **Language convention:** This spec and all development (code, comments, identifiers, commit messages, prompts) are in English. All user-facing UI text is in Brazilian Portuguese (pt-BR). Portuguese strings that must appear in the product are shown in quotes and marked as UI text.
 
@@ -26,15 +26,17 @@ MVP success: the owner can, unaided, (a) register an item, (b) record a sale tha
 
 ## 2. Module overview
 
-The system has a public part (landing page) and an internal part protected by login with four modules. The internal modules connect through one central idea: **every product leaving the store is a "sale,"** whether paid immediately or on credit. Understanding this avoids duplicating logic.
+The system has a public part (landing page) and an internal part protected by login with inventory, sales, clients, fiado, dashboard, and financial metrics. The internal modules connect through one central idea: **every product leaving the store is a "sale,"** whether paid immediately or on credit. Understanding this avoids duplicating logic.
 
 **Landing page (public).** Presents the inf.amily brand with the tagline (UI, pt-BR) "por família – pra família" and basic store info. In the future it will display available items (not now). It has a discreet admin access link to the internal login.
 
 **Inventory (UI: "Estoque").** Registers items with three essential pieces of information: the price the owner paid for the item (cost), the price she will sell it for, and the quantity in stock. It is the foundation of everything — sales and fiado consume stock, and profit comes from the difference between sale price and cost.
 
-**Sales (UI: "Vendas").** The owner selects one or more items (with quantity), the system **automatically deducts from stock**, and she records the payment method and date. A sale can be paid immediately (cash, pix, card) or be a fiado.
+**Sales (UI: "Vendas").** The owner selects a client and one or more items (with quantity), the system **automatically deducts from stock**, and she records the payment method and date. Immediate sales default to the protected "Cliente avulso" profile; a fiado requires a registered client.
 
-**Fiado (store credit / installments; UI: "Fiado" / "Clientes").** When a sale is on credit, besides deducting stock the system records the debt: the person's name, the items taken, the agreed settlement date, the payment frequency (weekly, biweekly, or monthly), and the number of installments. The owner tracks who is overdue and marks installments as paid. In practice this is the store's "clients" view — the list of who bought and what they owe.
+**Clients (UI: "Clientes").** Stores each client's contact details, notes, purchase history, and outstanding fiado total. Every sale belongs to a client, so a person's name has one source of truth across sales and collections.
+
+**Fiado (store credit / installments; UI: "Fiado").** When a sale is on credit, besides deducting stock the system records the debt terms: the agreed settlement date, payment frequency (weekly, biweekly, or monthly), and number of installments. The client is reached through the sale. The owner tracks who is overdue and marks installments as paid.
 
 **Financial summary (UI: "Métricas").** Automatically tallies entries (money received) and profit (sale price minus cost, over what was sold), plus what is still to be received from fiado.
 
@@ -46,7 +48,7 @@ Rather than treating Sales and Fiado as two separate systems (which would duplic
 - If the payment method is immediate, it counts as an entry right away.
 - If the payment method is **fiado**, the same sale additionally creates a **fiado record** with the installment terms, and entries accrue as installments are paid.
 
-In the UI this appears as **two distinct flows** ("Registrar venda" and "Registrar fiado"), because that matches how the owner thinks — but underneath it is the same data model. This keeps the interface simple without messing up the logic.
+In the UI this appears as one sale form with conditional fiado terms. Underneath it remains the same unified data model and one atomic transaction.
 
 ---
 
@@ -109,16 +111,32 @@ Mandatory per the project; recommended libraries as guidance.
 
 ## 5. Database model
 
-Authentication is managed by Supabase Auth (`auth.users`) and does not need to be modeled. The domain has four entities with simple relationships. Table and column names are in English (they are code identifiers).
+Authentication is managed by Supabase Auth (`auth.users`) and does not need to be modeled. The domain has five entities with simple relationships. Table and column names are in English (they are code identifiers).
 
 ### Relationships
 
 ```
 products (1) ──< (N) sale_items (N) >── (1) sales
+clients (1) ───< (N) sales
 sales (1) ──── (0 or 1) fiado_accounts
 ```
 
-A sale (`sales`) has many items (`sale_items`); each item points to one product (`products`). A **fiado** sale has exactly one `fiado_accounts` record; immediate sales have none.
+A sale (`sales`) has many items (`sale_items`), belongs to one client, and each item points to one product (`products`). A **fiado** sale has exactly one `fiado_accounts` record; immediate sales have none. Client deletion is restricted when sales history exists.
+
+### Table `clients` (Clients)
+
+| Field           | Type        | Constraints           | Description                              |
+| --------------- | ----------- | --------------------- | ---------------------------------------- |
+| `id`            | UUID        | PK                    | Client identifier.                       |
+| `first_name`    | TEXT        | NOT NULL              | First name.                              |
+| `last_name`     | TEXT        | NOT NULL              | Last name.                               |
+| `phone`         | TEXT        | NOT NULL              | Contact phone.                           |
+| `social_handle` | TEXT        | nullable              | Instagram or Facebook handle.            |
+| `notes`         | TEXT        | nullable              | Store notes about the client.            |
+| `created_at`    | TIMESTAMPTZ | NOT NULL, default now | Creation.                                |
+| `updated_at`    | TIMESTAMPTZ | NOT NULL, default now | Last update.                             |
+
+The fixed UUID `00000000-0000-0000-0000-000000000001` belongs to the protected "Cliente avulso" profile. It cannot be renamed or deleted through the API and cannot be used for fiado sales.
 
 ### Table `products` (Inventory)
 
@@ -142,6 +160,7 @@ A sale (`sales`) has many items (`sale_items`); each item points to one product 
 | Field            | Type          | Constraints                                | Description                               |
 | ---------------- | ------------- | ------------------------------------------ | ----------------------------------------- |
 | `id`             | UUID          | PK                                         | Sale identifier.                          |
+| `client_id`      | UUID          | FK → clients, NOT NULL, ON DELETE RESTRICT | Client who made the purchase.             |
 | `sale_date`      | DATE          | NOT NULL                                   | Sale date.                                |
 | `payment_method` | TEXT          | NOT NULL, ∈ {dinheiro, pix, cartao, fiado} | Payment method (values are domain codes). |
 | `total_amount`   | NUMERIC(10,2) | NOT NULL                                   | Sum of items at sale price (snapshot).    |
@@ -173,7 +192,6 @@ Price snapshotting is essential: if the owner later changes an item's price, pas
 | ------------------------ | ------------- | --------------------------------------- | --------------------------------------------------------- |
 | `id`                     | UUID          | PK                                      | Fiado identifier.                                         |
 | `sale_id`                | UUID          | FK → sales, NOT NULL, UNIQUE (1:1)      | Sale that originated the fiado (holds the items taken).   |
-| `customer_name`          | TEXT          | NOT NULL                                | Person's name.                                            |
 | `frequency`              | TEXT          | NOT NULL, ∈ {weekly, biweekly, monthly} | Payment frequency.                                        |
 | `installments_count`     | INTEGER       | NOT NULL, > 0                           | Number of installments.                                   |
 | `installment_amount`     | NUMERIC(10,2) | NOT NULL                                | Installment value (auto = total ÷ count; see section 16). |
@@ -227,13 +245,9 @@ infamily/                     # (brand displayed as: infamily)
 │   │   │   │   ├── page.tsx           # Item list
 │   │   │   │   ├── nova/page.tsx      # Create item
 │   │   │   │   └── [id]/page.tsx      # Item detail / edit
-│   │   │   ├── vendas/
-│   │   │   │   ├── page.tsx           # Sales history
-│   │   │   │   ├── nova/page.tsx      # Record a sale (immediate)
-│   │   │   │   └── fiado/page.tsx     # Record a fiado sale
-│   │   │   ├── fiado/
-│   │   │   │   ├── page.tsx           # Fiado list (clients / collection)
-│   │   │   │   └── [id]/page.tsx      # Fiado detail + mark installment paid
+│   │   │   ├── vendas/page.tsx         # Record sales + sales history
+│   │   │   ├── clientes/page.tsx       # Search, create, and client detail
+│   │   │   ├── fiado/page.tsx          # Collection list + detail/payment
 │   │   │   └── resumo/page.tsx        # Financial summary
 │   │   ├── login/page.tsx             # Admin login
 │   │   ├── layout.tsx
@@ -252,10 +266,11 @@ infamily/                     # (brand displayed as: infamily)
     │   ├── config.py
     │   ├── database.py
     │   ├── auth.py                    # JWT verification (JWKS)
-    │   ├── models/                    # products, sales, sale_items, fiado
+    │   ├── models/                    # clients, products, sales, sale_items, fiado
     │   ├── schemas/                   # Pydantic schemas
     │   ├── routers/
     │   │   ├── products.py
+    │   │   ├── clients.py
     │   │   ├── sales.py
     │   │   ├── fiado.py
     │   │   ├── dashboard.py
@@ -283,9 +298,11 @@ The **internal home** (`/painel`, protected) — the first screen after login: o
 
 **Inventory** — item list (`/estoque`) showing name, sale price, and quantity (highlighting low stock); create (`/estoque/nova`) with name, cost, sale price, and quantity; detail/edit (`/estoque/[id]`) of the same fields.
 
-**Sales** — record an immediate sale (`/vendas/nova`): select items and quantities, watch the total update, choose payment method and date, confirm (deducts stock); record a fiado (`/vendas/fiado`): same item selection, plus the person's name, agreed date, frequency, and number of installments; sales history (`/vendas`) as a simple list.
+**Sales** — `/vendas` combines sale registration and history. Select or add a client inline, choose items and quantities, watch the total update, choose payment method and date, and confirm. Immediate sales default to "Cliente avulso". Fiado uses the same flow with a required registered client plus agreed date, frequency, and installment count.
 
-**Fiado / clients** — fiado list (`/fiado`), the clients/collection screen: who owes, status (overdue/due soon/paid off), next date, and balance; detail (`/fiado/[id]`): items taken, terms, balance, next date, and the "mark installment as paid" button.
+**Clients** — `/clientes` has a searchable list, registration form, and client detail showing contact information, purchase history, and outstanding fiado total.
+
+**Fiado** — `/fiado` is the collection screen: who owes, status (overdue/due soon/paid off), next date, and balance. Its detail view shows items taken, terms, balance, next date, and the "mark installment as paid" button.
 
 **Financial summary** (UI: "Métricas", `/resumo`, protected) — five direct numbers: total sold, total cost, total profit, received (entries), and to receive. Optional simple period filter over sales.
 
@@ -319,10 +336,21 @@ All data endpoints require a valid Supabase token in `Authorization: Bearer <tok
 | Method | Route             | Description                                                                                                                                                                                                                          |
 | ------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | GET    | `/api/sales`      | List sales (optional period filter).                                                                                                                                                                                                 |
-| POST   | `/api/sales`      | Create a sale: items (product + quantity) + payment method + date. **In a transaction**: validate stock, deduct, snapshot prices, compute totals. If `payment_method = fiado`, also create the fiado record with the received terms. |
+| POST   | `/api/sales`      | Create a sale: required client + items + payment method + date. **In a transaction**: validate client and stock, deduct, snapshot prices, and compute totals. If `payment_method = fiado`, reject "Cliente avulso" and create the fiado record with the received terms. |
 | GET    | `/api/sales/{id}` | Sale detail with items.                                                                                                                                                                                                              |
 
 
+
+
+### Clients
+
+| Method | Route               | Description                                                                                  |
+| ------ | ------------------- | -------------------------------------------------------------------------------------------- |
+| GET    | `/api/clients`      | List clients by first name; optional `q` matches full name or phone.                          |
+| POST   | `/api/clients`      | Register a client.                                                                           |
+| GET    | `/api/clients/{id}` | Client profile with itemized sales history and SQL-aggregated outstanding fiado balance.     |
+| PATCH  | `/api/clients/{id}` | Partially update a client; the walk-in client's name is protected.                            |
+| DELETE | `/api/clients/{id}` | Delete a client; blocked for the walk-in profile and for any client that has sales history.   |
 
 
 ### Fiado
@@ -332,7 +360,6 @@ All data endpoints require a valid Supabase token in `Authorization: Bearer <tok
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/fiado`          | List fiados with derived status (clients / collection).                                                                                      |
 | GET    | `/api/fiado/{id}`     | Detail: client, items taken, terms, balance, next date.                                                                                      |
-| PATCH  | `/api/fiado/{id}`     | Edit client/terms of the fiado.                                                                                                              |
 | POST   | `/api/fiado/{id}/pay` | Record an installment payment: reduce the balance by the installment amount (never negative) and advance the next date if a balance remains. |
 
 
@@ -358,9 +385,9 @@ The **AuthGuard / protected layout** checks the session before rendering interna
 
 The **ProductForm** (create and edit item) and **ProductListItem** (inventory list row); the **StockBadge** flags low/zero stock.
 
-The **SaleForm** with a **ProductPicker** (select items and quantities, total updating live), **PaymentMethodSelect**, and a date picker. Reused by both the immediate-sale and fiado flows, with extra fiado fields when applicable.
+The **SaleForm** with a searchable **ClientPicker**, inline client creation, **ProductPicker** (select items and quantities, total updating live), **PaymentMethodSelect**, and a date picker. Reused by both the immediate-sale and fiado flows, with extra fiado fields when applicable.
 
-The **FiadoForm** (person's name, agreed date, frequency, number of installments), the **FiadoListItem**, and the **PayInstallmentButton** (mark installment paid, with a simple confirmation).
+The **ClientList**, **ClientForm**, and client detail with purchase history and open balance. The **FiadoForm** (agreed date, frequency, number of installments), **FiadoListItem**, and **PayInstallmentButton** handle collection.
 
 The **StatusBadge** (reused): red for overdue, amber for due soon, neutral for current, subtle for paid off.
 
@@ -428,6 +455,8 @@ Sequence prioritizing getting the inventory → sale → deduction cycle working
 
 **Phase 4 — Fiado.** `fiado_accounts` table; the fiado-sale flow (same stock deduction + fiado creation) and installment payment (balance + date advance + status). Done when: record a fiado, see it in collection, mark an installment paid, and watch the status change.
 
+**Phase 4.1 — Clients.** `clients` table linked to every sale; protected walk-in profile, client CRUD/search/detail, sales history, open-fiado balance, and client selection in the sale flow.
+
 **Phase 5 — Dashboard.** Overdue at the top (red), due soon, and a low-stock notice.
 
 **Phase 6 — Financial summary.** Endpoint and screen with profit, total sold, received, and to receive.
@@ -446,7 +475,7 @@ What ships in the first release:
 2. Secure admin login (single user) via Supabase Auth.
 3. Inventory: create, list, and edit items with cost, sale price, and quantity.
 4. Immediate sales: select items, automatically deduct stock, record payment method and date.
-5. Fiado/clients: credit sale with stock deduction, client record, items taken, agreed date, frequency, and installment count; collection with overdue status and a mark-installment-paid button.
+5. Clients and fiado: searchable client records and purchase history; credit sale with stock deduction, selected client, agreed date, frequency, and installment count; collection with overdue status and a mark-installment-paid button.
 6. Dashboard with overdue, due soon, and low stock.
 7. Financial summary with profit, total sold, received, and to receive.
 8. HTTPS, JWT verification, restricted CORS, separated secrets, and RLS enabled.

@@ -18,7 +18,7 @@ class DashboardOverdueFiadoRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    customer_name: str
+    client_name: str
     next_due_date: date
     remaining_balance: Decimal
     days_overdue: int
@@ -30,7 +30,7 @@ class DashboardDueSoonFiadoRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    customer_name: str
+    client_name: str
     next_due_date: date
     remaining_balance: Decimal
 

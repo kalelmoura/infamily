@@ -11,8 +11,9 @@ Re-exporting the models from this one place means a single
 whole schema visible. Add every new model to this file as it is created.
 """
 
+from app.models.client import Client
 from app.models.fiado import FiadoAccount
 from app.models.product import Product
 from app.models.sale import Sale, SaleItem
 
-__all__ = ["FiadoAccount", "Product", "Sale", "SaleItem"]
+__all__ = ["Client", "FiadoAccount", "Product", "Sale", "SaleItem"]

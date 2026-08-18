@@ -136,7 +136,6 @@ def build_fiado_account(sale: Sale, terms: FiadoTermsCreate) -> FiadoAccount:
     """
     return FiadoAccount(
         sale=sale,
-        customer_name=terms.customer_name,
         # `Frequency` is a StrEnum, so this goes into the TEXT column as
         # "weekly"/"biweekly"/"monthly" with no conversion.
         frequency=terms.frequency,

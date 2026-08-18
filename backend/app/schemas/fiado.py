@@ -6,7 +6,8 @@ classes describe the JSON.
 Two things are worth reading closely.
 
 **What a caller may set is a short list.** Creating a fiado means sending the
-*terms* only — who, how often, in how many installments, by when. The three
+*terms* only — how often, in how many installments, and by when. The client is
+selected on the sale itself. The three
 numbers that matter financially (`installment_amount`, `next_due_date`,
 `remaining_balance`) are all derived server-side from the sale total and those
 terms. A client that could set `remaining_balance` could write off a debt with a
@@ -30,7 +31,7 @@ from enum import StrEnum
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Frequency(StrEnum):
@@ -65,11 +66,6 @@ class FiadoStatus(StrEnum):
     PAID_OFF = "paid_off"
 
 
-# Same treatment as `ProductName`: strip first, then require at least one
-# character, so a name of "   " is rejected rather than stored as blank.
-CustomerName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-
-
 class FiadoTermsCreate(BaseModel):
     """The fiado terms, sent nested inside the body of `POST /api/sales`.
 
@@ -80,7 +76,6 @@ class FiadoTermsCreate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    customer_name: CustomerName
     frequency: Frequency
 
     # `gt=0` mirrors the table's CHECK. Zero would be a division by zero when
@@ -99,7 +94,8 @@ class FiadoRead(BaseModel):
 
     id: UUID
     sale_id: UUID
-    customer_name: str
+    client_id: UUID
+    client_name: str
     frequency: Frequency
     installments_count: int
     installment_amount: Decimal

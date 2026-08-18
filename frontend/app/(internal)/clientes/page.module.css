@@ -1,0 +1,627 @@
+.page {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: clamp(38px, 5vw, 72px) clamp(24px, 5vw, 68px) 72px;
+  color: var(--internal-ink);
+}
+
+.pageHeader {
+  max-width: 680px;
+}
+
+.eyebrow,
+.panelKicker {
+  margin: 0;
+  color: var(--internal-clay);
+  font-size: 0.67rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.pageHeader h1 {
+  margin: 8px 0 0;
+  font-family: var(--font-editorial), Georgia, serif;
+  font-size: clamp(2.7rem, 5vw, 4.4rem);
+  font-weight: 530;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.pageHeader > p:last-child {
+  margin: 18px 0 0;
+  color: var(--internal-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.workspaceGrid {
+  display: grid;
+  margin-top: 38px;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(310px, 0.85fr);
+  align-items: start;
+}
+
+.listPanel,
+.formPanel,
+.profileCard,
+.historySection {
+  border: 1px solid var(--internal-line);
+  border-radius: 24px;
+  background: #fffdf9;
+  box-shadow: 0 22px 54px -42px rgba(78, 51, 36, 0.38);
+}
+
+.listPanel,
+.formPanel,
+.profileCard,
+.historySection {
+  padding: clamp(20px, 3vw, 30px);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.panelHeader h2 {
+  margin: 5px 0 0;
+  font-family: var(--font-editorial), Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 540;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.countBadge {
+  display: grid;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid rgba(96, 104, 78, 0.2);
+  border-radius: 999px;
+  place-items: center;
+  color: var(--internal-olive-dark);
+  background: rgba(96, 104, 78, 0.08);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.searchField {
+  display: block;
+  margin-top: 24px;
+}
+
+.searchField > span,
+.formField > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--internal-muted);
+  font-size: 0.77rem;
+  font-weight: 650;
+}
+
+.searchField > div {
+  position: relative;
+}
+
+.searchField svg {
+  position: absolute;
+  top: 50%;
+  left: 15px;
+  width: 19px;
+  color: var(--internal-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.searchField input,
+.formField input,
+.formField textarea {
+  width: 100%;
+  border: 1px solid rgba(91, 70, 58, 0.18);
+  border-radius: 13px;
+  outline: none;
+  color: var(--internal-ink);
+  background: var(--internal-paper-soft);
+  font: inherit;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.searchField input {
+  min-height: 49px;
+  padding: 0 15px 0 44px;
+}
+
+.formField input {
+  min-height: 49px;
+  padding: 0 14px;
+}
+
+.formField textarea {
+  min-height: 104px;
+  padding: 13px 14px;
+  resize: vertical;
+}
+
+.searchField input:focus,
+.formField input:focus,
+.formField textarea:focus {
+  border-color: rgba(169, 103, 83, 0.55);
+  background: #fffdf9;
+  box-shadow: 0 0 0 4px rgba(169, 103, 83, 0.09);
+}
+
+.listBody {
+  margin-top: 18px;
+}
+
+.clientList,
+.historyList,
+.historyCard ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clientList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clientRow {
+  display: grid;
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  grid-template-columns: 42px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  transition:
+    transform 180ms cubic-bezier(0.22, 0.9, 0.3, 1),
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.clientRow:hover {
+  transform: translateX(2px);
+  border-color: var(--internal-line);
+  background: var(--internal-paper-soft);
+}
+
+.clientRow > svg {
+  width: 18px;
+  color: var(--internal-clay);
+}
+
+.avatar,
+.profileAvatar {
+  display: grid;
+  border: 1px solid rgba(169, 103, 83, 0.18);
+  border-radius: 50%;
+  place-items: center;
+  color: var(--internal-clay-dark);
+  background: rgba(169, 103, 83, 0.09);
+  font-family: var(--font-editorial), Georgia, serif;
+  font-weight: 650;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 1.05rem;
+}
+
+.clientIdentity,
+.clientName {
+  min-width: 0;
+}
+
+.clientIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.clientName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.clientName small {
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--internal-olive-dark);
+  background: rgba(96, 104, 78, 0.1);
+  font-size: 0.59rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.clientPhone {
+  overflow: hidden;
+  color: var(--internal-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clientForm {
+  display: flex;
+  margin-top: 24px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nameGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.primaryButton,
+.deleteButton,
+.backButton,
+.stateCard button {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.primaryButton {
+  min-height: 52px;
+  margin-top: 3px;
+  padding: 0 20px;
+  border-radius: 14px;
+  color: #fffaf3;
+  background: var(--internal-clay);
+  box-shadow: 0 14px 28px -18px rgba(143, 87, 69, 0.7);
+  font-size: 0.9rem;
+  font-weight: 750;
+  transition:
+    transform 180ms cubic-bezier(0.22, 0.9, 0.3, 1),
+    background-color 180ms ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--internal-clay-dark);
+}
+
+.primaryButton:disabled,
+.deleteButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.formError {
+  margin: 0;
+  color: #a33c35;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.stateCard,
+.emptyCard {
+  display: flex;
+  min-height: 94px;
+  padding: 20px;
+  border: 1px dashed rgba(91, 70, 58, 0.17);
+  border-radius: 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--internal-muted);
+  background: var(--internal-paper-soft);
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.stateCard p,
+.emptyCard p {
+  margin: 0;
+}
+
+.emptyCard span {
+  color: var(--internal-olive);
+  font-size: 1rem;
+}
+
+.errorCard {
+  flex-direction: column;
+  color: #993e37;
+}
+
+.stateCard button {
+  padding: 8px 12px;
+  border-radius: 9px;
+  color: var(--internal-clay-dark);
+  background: rgba(169, 103, 83, 0.1);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.detailView {
+  margin-top: 38px;
+}
+
+.backButton {
+  padding: 0;
+  color: var(--internal-muted);
+  background: transparent;
+  font-size: 0.8rem;
+}
+
+.backButton:hover {
+  color: var(--internal-clay-dark);
+}
+
+.profileCard {
+  position: relative;
+  margin-top: 18px;
+}
+
+.profileHeading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profileAvatar {
+  width: 62px;
+  height: 62px;
+  font-size: 1.65rem;
+  flex: 0 0 auto;
+}
+
+.profileHeading h2 {
+  margin: 4px 0 0;
+  font-family: var(--font-editorial), Georgia, serif;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 540;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.profileHeading > div > span {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--internal-olive-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.contactGrid {
+  display: grid;
+  margin: 28px 0 0;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.contactGrid > div {
+  padding: 15px 16px;
+  border-radius: 14px;
+  background: var(--internal-paper-soft);
+}
+
+.contactGrid dt {
+  color: var(--internal-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.contactGrid dd {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.notesItem {
+  grid-column: 1 / -1;
+}
+
+.deleteButton {
+  margin-top: 20px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: #9d3d36;
+  background: rgba(163, 60, 53, 0.07);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.balanceCard {
+  display: flex;
+  margin-top: 18px;
+  padding: 23px 26px;
+  border: 1px solid;
+  border-radius: 20px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.balanceCard p,
+.balanceCard strong,
+.balanceCard span {
+  margin: 0;
+}
+
+.balanceCard p {
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.balanceCard strong {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--font-editorial), Georgia, serif;
+  font-size: 2rem;
+  font-weight: 580;
+  letter-spacing: -0.04em;
+}
+
+.balanceCard > span {
+  max-width: 310px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.balanceOpen {
+  border-color: rgba(169, 103, 83, 0.2);
+  color: #744231;
+  background: rgba(169, 103, 83, 0.09);
+}
+
+.balanceClear {
+  border-color: rgba(96, 104, 78, 0.19);
+  color: var(--internal-olive-dark);
+  background: rgba(96, 104, 78, 0.08);
+}
+
+.historySection {
+  margin-top: 18px;
+}
+
+.historySection > .emptyCard,
+.historyList {
+  margin-top: 22px;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.historyCard {
+  padding: 17px 18px;
+  border: 1px solid var(--internal-line);
+  border-radius: 16px;
+  background: var(--internal-paper-soft);
+}
+
+.saleTopline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.saleTopline > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.saleTopline strong {
+  font-size: 0.92rem;
+}
+
+.saleTopline span {
+  color: var(--internal-muted);
+  font-size: 0.72rem;
+}
+
+.historyCard ul {
+  display: flex;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--internal-line);
+  flex-direction: column;
+  gap: 7px;
+}
+
+.historyCard ul li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--internal-muted);
+  font-size: 0.76rem;
+}
+
+.clientRow:focus-visible,
+.primaryButton:focus-visible,
+.backButton:focus-visible,
+.deleteButton:focus-visible {
+  outline: 3px solid rgba(169, 103, 83, 0.28);
+  outline-offset: 3px;
+}
+
+@media (max-width: 820px) {
+  .workspaceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .formPanel {
+    order: -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 34px 18px 55px;
+  }
+
+  .workspaceGrid,
+  .detailView {
+    margin-top: 30px;
+  }
+
+  .listPanel,
+  .formPanel,
+  .profileCard,
+  .historySection {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .nameGrid,
+  .contactGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .notesItem {
+    grid-column: auto;
+  }
+
+  .profileHeading {
+    align-items: flex-start;
+  }
+
+  .balanceCard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .balanceCard > span {
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clientRow,
+  .primaryButton {
+    transition: none;
+  }
+}

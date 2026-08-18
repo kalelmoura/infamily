@@ -4,7 +4,8 @@ Maps the `fiado_accounts` table from the spec (section 5). The unifying idea
 from section 2 is what makes this table so small: **a fiado is not a second kind
 of sale**. The items taken, the totals and the stock deduction all live on the
 `sales`/`sale_items` rows already; this table only adds what a credit sale needs
-*extra* — who owes, on what terms, and how much is still open.
+*extra* — the payment terms and how much is still open. Who owes is reached
+through `fiado.sale.client`, so the person's identity has one source of truth.
 
 That is why there is no `items` here and no `total_amount`: both are one join
 away through `sale_id`, and copying them would create two numbers that can
@@ -101,10 +102,6 @@ class FiadoAccount(Base):
         nullable=False,
         unique=True,
     )
-
-    # Free text, not a FK to a `customers` table. The MVP deliberately has no
-    # customer entity (spec section 15): this list *is* the store's client view.
-    customer_name: Mapped[str] = mapped_column(Text, nullable=False)
 
     frequency: Mapped[str] = mapped_column(Text, nullable=False)
     installments_count: Mapped[int] = mapped_column(Integer, nullable=False)

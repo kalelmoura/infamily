@@ -5,7 +5,13 @@ import { usePathname } from "next/navigation";
 
 import styles from "./layout.module.css";
 
-type NavIconName = "home" | "stock" | "sales" | "fiado" | "metrics";
+type NavIconName =
+  | "home"
+  | "stock"
+  | "sales"
+  | "clients"
+  | "fiado"
+  | "metrics";
 
 const navItems: Array<{
   href: string;
@@ -15,6 +21,7 @@ const navItems: Array<{
   { href: "/painel", label: "Início", icon: "home" },
   { href: "/estoque", label: "Estoque", icon: "stock" },
   { href: "/vendas", label: "Vendas", icon: "sales" },
+  { href: "/clientes", label: "Clientes", icon: "clients" },
   { href: "/fiado", label: "Fiados", icon: "fiado" },
   { href: "/resumo", label: "Métricas", icon: "metrics" },
 ];
@@ -95,6 +102,35 @@ function NavIcon({ name }: { name: NavIconName }) {
         />
         <path
           d="M15.5 8.3h4.8M17.9 5.9v4.8"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
+  if (name === "clients") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+        <rect
+          x="4"
+          y="3.5"
+          width="16"
+          height="17"
+          rx="2.5"
+          stroke="currentColor"
+          strokeWidth="1.7"
+        />
+        <circle
+          cx="12"
+          cy="9"
+          r="2.5"
+          stroke="currentColor"
+          strokeWidth="1.7"
+        />
+        <path
+          d="M7.8 17c.45-2.35 1.85-3.55 4.2-3.55s3.75 1.2 4.2 3.55"
           stroke="currentColor"
           strokeWidth="1.7"
           strokeLinecap="round"

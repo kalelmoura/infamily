@@ -9,11 +9,13 @@ SQL would create a second implementation to keep in sync.
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.models.fiado import FiadoAccount
 from app.models.product import Product
+from app.models.sale import Sale
 from app.schemas.dashboard import (
     DashboardDueSoonFiadoRead,
     DashboardLowStockProductRead,
@@ -38,7 +40,9 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)) -> DashboardRead:
     today = today_in_store()
 
     fiado_result = await db.execute(
-        select(FiadoAccount).where(FiadoAccount.remaining_balance > 0)
+        select(FiadoAccount)
+        .where(FiadoAccount.remaining_balance > 0)
+        .options(selectinload(FiadoAccount.sale).selectinload(Sale.client))
     )
     fiados = fiado_result.scalars().all()
 
@@ -52,7 +56,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)) -> DashboardRead:
             overdue.append(
                 DashboardOverdueFiadoRead(
                     id=fiado.id,
-                    customer_name=fiado.customer_name,
+                    client_name=fiado.sale.client.full_name,
                     next_due_date=fiado.next_due_date,
                     remaining_balance=fiado.remaining_balance,
                     days_overdue=(today - fiado.next_due_date).days,
@@ -62,7 +66,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)) -> DashboardRead:
             due_soon.append(
                 DashboardDueSoonFiadoRead(
                     id=fiado.id,
-                    customer_name=fiado.customer_name,
+                    client_name=fiado.sale.client.full_name,
                     next_due_date=fiado.next_due_date,
                     remaining_balance=fiado.remaining_balance,
                 )

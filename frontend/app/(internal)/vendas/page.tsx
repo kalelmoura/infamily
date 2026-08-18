@@ -13,6 +13,7 @@ import {
   todayInSaoPaulo,
 } from "@/lib/format";
 import type {
+  Client,
   FiadoFrequency,
   PaymentMethod,
   Product,
@@ -77,6 +78,10 @@ export default function VendasPage() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState("");
 
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [clientsError, setClientsError] = useState("");
+
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoadingSales, setIsLoadingSales] = useState(true);
   const [salesError, setSalesError] = useState("");
@@ -88,17 +93,27 @@ export default function VendasPage() {
   // once, on the first render, instead of on every render.
   const [saleDate, setSaleDate] = useState(todayInSaoPaulo);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("dinheiro");
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // --- Inline client registration ----------------------------------------
+  const [isAddingClient, setIsAddingClient] = useState(false);
+  const [newClientFirstName, setNewClientFirstName] = useState("");
+  const [newClientLastName, setNewClientLastName] = useState("");
+  const [newClientPhone, setNewClientPhone] = useState("");
+  const [newClientSocial, setNewClientSocial] = useState("");
+  const [newClientError, setNewClientError] = useState("");
+  const [isSavingClient, setIsSavingClient] = useState(false);
 
   // --- The fiado terms, used only when the payment method is "fiado" -------
   // Kept as ordinary state next to the rest of the form rather than in a
   // separate component: this is the spec's unified model showing through, one
   // form recording one event, with four extra fields when the sale is on
   // credit. They stay in state while another method is selected — switching to
-  // Pix and back does not make her retype the customer's name.
-  const [fiadoCustomerName, setFiadoCustomerName] = useState("");
+  // Pix and back does not make her re-enter the payment agreement.
   const [fiadoFrequency, setFiadoFrequency] = useState<FiadoFrequency>("monthly");
   const [fiadoInstallments, setFiadoInstallments] = useState("1");
   const [fiadoAgreedDate, setFiadoAgreedDate] = useState("");
@@ -132,16 +147,53 @@ export default function VendasPage() {
     }
   }, []);
 
+  const loadClients = useCallback(async () => {
+    try {
+      const data = await api.get<Client[]>("/api/clients");
+      setClients(data);
+      setSelectedClientId((current) => {
+        if (data.some((client) => client.id === current)) return current;
+        return data.find((client) => client.is_walk_in)?.id ?? "";
+      });
+      setClientsError("");
+    } catch (error) {
+      setClientsError(
+        messageFrom(error, "Não foi possível carregar os clientes."),
+      );
+    } finally {
+      setIsLoadingClients(false);
+    }
+  }, []);
+
   useEffect(() => {
     // An effect callback may not be `async` (React reads its return value as a
     // cleanup function), so the work goes in an immediately-invoked one.
     // `Promise.all` fires both requests at once rather than one after the other.
     (async () => {
-      await Promise.all([loadProducts(), loadSales()]);
+      await Promise.all([loadProducts(), loadSales(), loadClients()]);
     })();
-  }, [loadProducts, loadSales]);
+  }, [loadClients, loadProducts, loadSales]);
 
   const productsById = new Map(products.map((product) => [product.id, product]));
+  const clientsById = new Map(clients.map((client) => [client.id, client]));
+  const walkInClient = clients.find((client) => client.is_walk_in) ?? null;
+  const selectedClient = clientsById.get(selectedClientId) ?? null;
+  const clientSelectValue =
+    paymentMethod === "fiado" && selectedClient?.is_walk_in
+      ? ""
+      : selectedClientId;
+  const normalizedClientSearch = clientSearch.trim().toLocaleLowerCase("pt-BR");
+  const filteredClients = clients.filter((client) => {
+    if (!normalizedClientSearch) return true;
+    return `${client.full_name} ${client.phone}`
+      .toLocaleLowerCase("pt-BR")
+      .includes(normalizedClientSearch);
+  });
+  const clientOptions =
+    selectedClient !== null &&
+    !filteredClients.some((client) => client.id === selectedClient.id)
+      ? [selectedClient, ...filteredClients]
+      : filteredClients;
 
   /**
    * A line's subtotal in cents, or `null` if the line isn't fully valid yet.
@@ -201,6 +253,58 @@ export default function VendasPage() {
     setLines((current) => current.filter((line) => line.key !== key));
   }
 
+  function handlePaymentMethodChange(nextMethod: PaymentMethod) {
+    setPaymentMethod(nextMethod);
+    setFormError("");
+
+    if (nextMethod === "fiado" && selectedClient?.is_walk_in) {
+      setSelectedClientId("");
+      return;
+    }
+
+    if (nextMethod !== "fiado" && !selectedClientId && walkInClient) {
+      setSelectedClientId(walkInClient.id);
+    }
+  }
+
+  async function handleCreateClient() {
+    setNewClientError("");
+
+    const firstName = newClientFirstName.trim();
+    const lastName = newClientLastName.trim();
+    const phone = newClientPhone.trim();
+
+    if (!firstName || !lastName || !phone) {
+      setNewClientError("Informe nome, sobrenome e telefone.");
+      return;
+    }
+
+    setIsSavingClient(true);
+    try {
+      const client = await api.post<Client>("/api/clients", {
+        first_name: firstName,
+        last_name: lastName,
+        phone,
+        social_handle: newClientSocial.trim() || null,
+      });
+
+      await loadClients();
+      setSelectedClientId(client.id);
+      setClientSearch("");
+      setNewClientFirstName("");
+      setNewClientLastName("");
+      setNewClientPhone("");
+      setNewClientSocial("");
+      setIsAddingClient(false);
+    } catch (error) {
+      setNewClientError(
+        messageFrom(error, "Não foi possível adicionar o cliente."),
+      );
+    } finally {
+      setIsSavingClient(false);
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
@@ -208,6 +312,18 @@ export default function VendasPage() {
 
     if (lines.length === 0) {
       setFormError("Adicione pelo menos um produto à venda.");
+      return;
+    }
+
+    if (selectedClient === null) {
+      setFormError("Selecione um cliente para a venda.");
+      return;
+    }
+
+    if (paymentMethod === "fiado" && selectedClient.is_walk_in) {
+      setFormError(
+        "Uma venda no fiado precisa de um cliente cadastrado.",
+      );
       return;
     }
 
@@ -254,12 +370,6 @@ export default function VendasPage() {
     // them), so this block and the `payment_method` field have to agree.
     let fiado: Record<string, unknown> | undefined;
     if (paymentMethod === "fiado") {
-      const customerName = fiadoCustomerName.trim();
-      if (!customerName) {
-        setFormError("Informe o nome do cliente.");
-        return;
-      }
-
       const installments = parseQuantityInput(fiadoInstallments);
       if (installments === null || installments <= 0) {
         setFormError("Informe o número de parcelas (mínimo 1).");
@@ -280,7 +390,6 @@ export default function VendasPage() {
       }
 
       fiado = {
-        customer_name: customerName,
         frequency: fiadoFrequency,
         installments_count: installments,
         agreed_settlement_date: fiadoAgreedDate,
@@ -290,6 +399,7 @@ export default function VendasPage() {
     setIsSaving(true);
     try {
       const sale = await api.post<Sale>("/api/sales", {
+        client_id: selectedClient.id,
         sale_date: saleDate,
         payment_method: paymentMethod,
         items,
@@ -300,13 +410,14 @@ export default function VendasPage() {
 
       setSuccessMessage(
         paymentMethod === "fiado"
-          ? `Fiado de ${formatMoney(sale.total_amount)} registrado para ${fiadoCustomerName.trim()}.`
+          ? `Fiado de ${formatMoney(sale.total_amount)} registrado para ${selectedClient.full_name}.`
           : `Venda de ${formatMoney(sale.total_amount)} registrada com sucesso.`,
       );
       setLines([]);
       setSaleDate(todayInSaoPaulo());
       setPaymentMethod("dinheiro");
-      setFiadoCustomerName("");
+      setSelectedClientId(walkInClient?.id ?? "");
+      setClientSearch("");
       setFiadoFrequency("monthly");
       setFiadoInstallments("1");
       setFiadoAgreedDate("");
@@ -366,6 +477,163 @@ export default function VendasPage() {
 
       {/* --- Record a sale ------------------------------------------------ */}
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+        <section className="rounded-xl border border-[#e3d7cc] bg-[#f8f2e9] p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-medium text-[#342a24]">Cliente da venda</p>
+              <p className="mt-1 text-sm text-[#75675e]">
+                Vendas comuns começam como Cliente avulso.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddingClient((current) => !current);
+                setNewClientError("");
+              }}
+              className="shrink-0 rounded-lg border border-[#cbb7a8] bg-[#fffdf9] px-3 py-2 text-sm font-medium text-[#8f5745] transition-colors hover:bg-white"
+            >
+              {isAddingClient ? "Cancelar" : "+ Novo cliente"}
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="clientSearch" className={labelClassName}>
+                Buscar cliente
+              </label>
+              <input
+                id="clientSearch"
+                className={`mt-1 ${inputClassName} bg-[#fffdf9]`}
+                type="search"
+                placeholder="Nome ou telefone"
+                value={clientSearch}
+                onChange={(event) => setClientSearch(event.target.value)}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="clientId" className={labelClassName}>
+                Selecionar cliente
+              </label>
+              <select
+                id="clientId"
+                className={`mt-1 ${inputClassName} bg-[#fffdf9]`}
+                value={clientSelectValue}
+                onChange={(event) => setSelectedClientId(event.target.value)}
+                disabled={isLoadingClients}
+              >
+                <option value="">
+                  {isLoadingClients ? "Carregando…" : "Escolha um cliente"}
+                </option>
+                {clientOptions.map((client) => (
+                  <option
+                    key={client.id}
+                    value={client.id}
+                    disabled={paymentMethod === "fiado" && client.is_walk_in}
+                  >
+                    {client.full_name} — {client.phone}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {paymentMethod === "fiado" && (
+            <p className="mt-3 text-sm text-[#8f5745]">
+              Para fiado, selecione um cliente cadastrado.
+            </p>
+          )}
+
+          {clientsError && (
+            <p className="mt-3 text-sm text-red-600">{clientsError}</p>
+          )}
+
+          {!isLoadingClients &&
+            !clientsError &&
+            clientOptions.length === 0 && (
+              <p className="mt-3 text-sm text-[#75675e]">
+                Nenhum cliente encontrado para esta busca.
+              </p>
+            )}
+
+          {isAddingClient && (
+            <div className="mt-4 border-t border-[#dfd1c4] pt-4">
+              <p className="text-sm font-medium text-[#342a24]">
+                Adicionar sem sair da venda
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="newClientFirstName" className={labelClassName}>
+                    Nome
+                  </label>
+                  <input
+                    id="newClientFirstName"
+                    className={`mt-1 ${inputClassName} bg-[#fffdf9]`}
+                    type="text"
+                    value={newClientFirstName}
+                    onChange={(event) =>
+                      setNewClientFirstName(event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newClientLastName" className={labelClassName}>
+                    Sobrenome
+                  </label>
+                  <input
+                    id="newClientLastName"
+                    className={`mt-1 ${inputClassName} bg-[#fffdf9]`}
+                    type="text"
+                    value={newClientLastName}
+                    onChange={(event) =>
+                      setNewClientLastName(event.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newClientPhone" className={labelClassName}>
+                    Telefone
+                  </label>
+                  <input
+                    id="newClientPhone"
+                    className={`mt-1 ${inputClassName} bg-[#fffdf9]`}
+                    type="tel"
+                    value={newClientPhone}
+                    onChange={(event) => setNewClientPhone(event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newClientSocial" className={labelClassName}>
+                    Instagram ou Facebook (opcional)
+                  </label>
+                  <input
+                    id="newClientSocial"
+                    className={`mt-1 ${inputClassName} bg-[#fffdf9]`}
+                    type="text"
+                    placeholder="@usuario"
+                    value={newClientSocial}
+                    onChange={(event) => setNewClientSocial(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void handleCreateClient()}
+                disabled={isSavingClient}
+                className="mt-3 w-full rounded-lg bg-[#a96753] px-4 py-3 font-medium text-white transition-colors hover:bg-[#8f5745] disabled:opacity-50"
+              >
+                {isSavingClient ? "Adicionando…" : "Adicionar e selecionar"}
+              </button>
+
+              {newClientError && (
+                <p className="mt-3 text-sm text-red-600">{newClientError}</p>
+              )}
+            </div>
+          )}
+        </section>
+
         <div>
           <label htmlFor="productToAdd" className={labelClassName}>
             Adicionar produto
@@ -543,7 +811,7 @@ export default function VendasPage() {
               className={`mt-1 ${inputClassName}`}
               value={paymentMethod}
               onChange={(event) =>
-                setPaymentMethod(event.target.value as PaymentMethod)
+                handlePaymentMethodChange(event.target.value as PaymentMethod)
               }
             >
               {PAYMENT_METHOD_OPTIONS.map(([value, label]) => (
@@ -561,20 +829,6 @@ export default function VendasPage() {
             <p className="text-sm text-zinc-500">
               Dados do fiado
             </p>
-
-            <div>
-              <label htmlFor="fiadoCustomerName" className={labelClassName}>
-                Nome do cliente
-              </label>
-              <input
-                id="fiadoCustomerName"
-                className={`mt-1 ${inputClassName}`}
-                type="text"
-                placeholder="Maria da Silva"
-                value={fiadoCustomerName}
-                onChange={(event) => setFiadoCustomerName(event.target.value)}
-              />
-            </div>
 
             <div className="flex gap-4">
               <div className="flex-1">
@@ -718,7 +972,7 @@ export default function VendasPage() {
                   </div>
 
                   <p className="mt-1 text-sm text-zinc-500">
-                    {PAYMENT_METHOD_LABELS[sale.payment_method]}
+                    {sale.client_name} · {PAYMENT_METHOD_LABELS[sale.payment_method]}
                   </p>
 
                   <ul className="mt-2 text-sm text-zinc-500">

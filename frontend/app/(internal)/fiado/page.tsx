@@ -173,7 +173,7 @@ function FiadoPageContent() {
     // (a payment ledger is deliberately future work). Spelling out the amount
     // and the person makes an accidental tap obvious before it lands.
     const confirmed = window.confirm(
-      `Marcar uma parcela de ${formatMoney(detail.installment_amount)} como paga para ${detail.customer_name}?`,
+      `Marcar uma parcela de ${formatMoney(detail.installment_amount)} como paga para ${detail.client_name}?`,
     );
     if (!confirmed) return;
 
@@ -243,7 +243,7 @@ function FiadoPageContent() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <p className="min-w-0 truncate font-medium">
-                        {fiado.customer_name}
+                        {fiado.client_name}
                       </p>
                       <StatusBadge status={fiado.status} />
                     </div>
@@ -342,7 +342,7 @@ function FiadoDetailView({ detail }: { detail: FiadoDetail }) {
     <div className="mt-6">
       <div className="flex items-start justify-between gap-4">
         <h2 className="min-w-0 text-xl font-semibold tracking-tight">
-          {detail.customer_name}
+          {detail.client_name}
         </h2>
         <StatusBadge status={detail.status} />
       </div>
