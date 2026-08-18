@@ -66,7 +66,7 @@ export default function ResumoPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Métricas</h1>
       <p className="mt-2 text-sm text-zinc-500">
         Total lucro conta a margem de tudo que foi vendido, incluindo fiado
@@ -74,9 +74,9 @@ export default function ResumoPage() {
         o custo das peças vendidas mais o custo do estoque atual.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
-        <div className="flex gap-4">
-          <div className="flex-1">
+      <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4 sm:mt-8">
+        <div className="flex flex-col gap-4 min-[480px]:flex-row">
+          <div className="min-w-0 flex-1">
             <label htmlFor="startDate" className={labelClassName}>
               Data inicial
             </label>
@@ -89,7 +89,7 @@ export default function ResumoPage() {
             />
           </div>
 
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <label htmlFor="endDate" className={labelClassName}>
               Data final
             </label>
@@ -103,7 +103,7 @@ export default function ResumoPage() {
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 min-[420px]:flex-row">
           <button
             type="submit"
             disabled={isLoading}
@@ -116,7 +116,7 @@ export default function ResumoPage() {
             type="button"
             onClick={() => void handleClearFilter()}
             disabled={isLoading || (!startDate && !endDate)}
-            className="rounded-lg border border-zinc-300 px-4 py-4 text-base font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            className="w-full rounded-lg border border-zinc-300 px-4 py-4 text-base font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 min-[420px]:w-auto dark:border-zinc-700 dark:hover:bg-zinc-900"
           >
             Limpar
           </button>
@@ -132,7 +132,7 @@ export default function ResumoPage() {
       )}
 
       {summary !== null && !errorMessage && (
-        <section className="mt-8 grid gap-3 sm:grid-cols-2">
+        <section className="mt-8 grid gap-3 min-[480px]:grid-cols-2">
           <SummaryCard label="Total vendido" value={summary.total_sold} />
           <SummaryCard label="Total custo" value={summary.total_cost} />
           <SummaryCard label="Total lucro" value={summary.total_profit} />

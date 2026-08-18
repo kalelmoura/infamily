@@ -472,13 +472,13 @@ export default function VendasPage() {
     paymentMethod === "fiado" ? installmentPreviewFor(total) : null;
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Vendas</h1>
 
       {/* --- Record a sale ------------------------------------------------ */}
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4 sm:mt-8">
         <section className="rounded-xl border border-[#e3d7cc] bg-[#f8f2e9] p-4">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col items-stretch gap-3 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between min-[480px]:gap-4">
             <div>
               <p className="font-medium text-[#342a24]">Cliente da venda</p>
               <p className="mt-1 text-sm text-[#75675e]">
@@ -491,13 +491,13 @@ export default function VendasPage() {
                 setIsAddingClient((current) => !current);
                 setNewClientError("");
               }}
-              className="shrink-0 rounded-lg border border-[#cbb7a8] bg-[#fffdf9] px-3 py-2 text-sm font-medium text-[#8f5745] transition-colors hover:bg-white"
+              className="w-full shrink-0 rounded-lg border border-[#cbb7a8] bg-[#fffdf9] px-3 py-2 text-sm font-medium text-[#8f5745] transition-colors hover:bg-white min-[480px]:w-auto"
             >
               {isAddingClient ? "Cancelar" : "+ Novo cliente"}
             </button>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 min-[480px]:grid-cols-2">
             <div>
               <label htmlFor="clientSearch" className={labelClassName}>
                 Buscar cliente
@@ -562,7 +562,7 @@ export default function VendasPage() {
               <p className="text-sm font-medium text-[#342a24]">
                 Adicionar sem sair da venda
               </p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-3 min-[480px]:grid-cols-2">
                 <div>
                   <label htmlFor="newClientFirstName" className={labelClassName}>
                     Nome
@@ -638,7 +638,7 @@ export default function VendasPage() {
           <label htmlFor="productToAdd" className={labelClassName}>
             Adicionar produto
           </label>
-          <div className="mt-1 flex gap-3">
+          <div className="mt-1 flex flex-col gap-3 min-[480px]:flex-row">
             {/* A native <select> is the right control on a phone: it opens the
                 OS picker, which is far easier to hit than a custom dropdown. */}
             <select
@@ -663,7 +663,7 @@ export default function VendasPage() {
               type="button"
               onClick={handleAddLine}
               disabled={productToAdd === ""}
-              className="shrink-0 rounded-lg border border-zinc-300 px-5 py-3 text-base font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              className="w-full shrink-0 rounded-lg border border-zinc-300 px-5 py-3 text-base font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 min-[480px]:w-auto dark:border-zinc-700 dark:hover:bg-zinc-900"
             >
               Adicionar
             </button>
@@ -711,8 +711,8 @@ export default function VendasPage() {
                     </button>
                   </div>
 
-                  <div className="mt-3 flex gap-3">
-                    <div className="flex-1">
+                  <div className="mt-3 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+                    <div>
                       <label
                         htmlFor={`quantity-${line.key}`}
                         className={labelClassName}
@@ -731,7 +731,7 @@ export default function VendasPage() {
                       />
                     </div>
 
-                    <div className="flex-1">
+                    <div>
                       <label
                         htmlFor={`unitPrice-${line.key}`}
                         className={labelClassName}
@@ -786,8 +786,8 @@ export default function VendasPage() {
         )}
 
         {/* --- Date and payment -------------------------------------------- */}
-        <div className="flex gap-4">
-          <div className="flex-1">
+        <div className="flex flex-col gap-4 min-[480px]:flex-row">
+          <div className="min-w-0 flex-1">
             <label htmlFor="saleDate" className={labelClassName}>
               Data da venda
             </label>
@@ -802,7 +802,7 @@ export default function VendasPage() {
             />
           </div>
 
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <label htmlFor="paymentMethod" className={labelClassName}>
               Forma de pagamento
             </label>
@@ -830,8 +830,8 @@ export default function VendasPage() {
               Dados do fiado
             </p>
 
-            <div className="flex gap-4">
-              <div className="flex-1">
+            <div className="flex flex-col gap-4 min-[480px]:flex-row">
+              <div className="min-w-0 flex-1">
                 <label htmlFor="fiadoFrequency" className={labelClassName}>
                   Frequência
                 </label>
@@ -851,7 +851,7 @@ export default function VendasPage() {
                 </select>
               </div>
 
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <label htmlFor="fiadoInstallments" className={labelClassName}>
                   Número de parcelas
                 </label>
@@ -962,7 +962,7 @@ export default function VendasPage() {
                   key={sale.id}
                   className="rounded-lg border border-zinc-200 px-4 py-4 dark:border-zinc-800"
                 >
-                  <div className="flex items-baseline justify-between gap-4">
+                  <div className="flex items-baseline justify-between gap-3">
                     <p className="font-medium">
                       {formatSaleDate(sale.sale_date)}
                     </p>

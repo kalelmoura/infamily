@@ -60,7 +60,7 @@ export default function FiadoPage() {
   return (
     <Suspense
       fallback={
-        <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
+        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
           <p className="text-sm text-zinc-500">Carregando…</p>
         </main>
       }
@@ -197,7 +197,7 @@ function FiadoPageContent() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Fiado</h1>
 
       {selectedId === null ? (
@@ -248,7 +248,7 @@ function FiadoPageContent() {
                       <StatusBadge status={fiado.status} />
                     </div>
 
-                    <div className="mt-2 flex items-baseline justify-between gap-4">
+                    <div className="mt-2 flex flex-col items-start gap-1 min-[420px]:flex-row min-[420px]:items-baseline min-[420px]:justify-between min-[420px]:gap-4">
                       <p className="text-sm text-zinc-500">
                         {fiado.status === "paid_off"
                           ? "Sem parcelas em aberto"
@@ -340,7 +340,7 @@ function FiadoDetailView({ detail }: { detail: FiadoDetail }) {
 
   return (
     <div className="mt-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <h2 className="min-w-0 text-xl font-semibold tracking-tight">
           {detail.client_name}
         </h2>
@@ -349,7 +349,7 @@ function FiadoDetailView({ detail }: { detail: FiadoDetail }) {
 
       {/* --- The numbers that matter -------------------------------------- */}
       <div className="mt-6 rounded-lg border border-zinc-200 px-4 py-4 dark:border-zinc-800">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex items-baseline justify-between gap-3">
           <span className="text-base">Saldo devedor</span>
           <span
             className={`text-xl font-semibold ${
@@ -361,7 +361,7 @@ function FiadoDetailView({ detail }: { detail: FiadoDetail }) {
         </div>
 
         <dl className="mt-4 flex flex-col gap-2 text-sm text-zinc-500">
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col gap-1 min-[390px]:flex-row min-[390px]:justify-between min-[390px]:gap-4">
             <dt>Próxima parcela</dt>
             <dd className={detail.status === "overdue" ? "text-red-600" : ""}>
               {detail.status === "paid_off"
@@ -369,22 +369,22 @@ function FiadoDetailView({ detail }: { detail: FiadoDetail }) {
                 : formatSaleDate(detail.next_due_date)}
             </dd>
           </div>
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col gap-1 min-[390px]:flex-row min-[390px]:justify-between min-[390px]:gap-4">
             <dt>Valor da parcela</dt>
             <dd>{formatMoney(detail.installment_amount)}</dd>
           </div>
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col gap-1 min-[390px]:flex-row min-[390px]:justify-between min-[390px]:gap-4">
             <dt>Parcelas</dt>
             <dd>
               {detail.installments_count}× ·{" "}
               {FREQUENCY_LABELS[detail.frequency]}
             </dd>
           </div>
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col gap-1 min-[390px]:flex-row min-[390px]:justify-between min-[390px]:gap-4">
             <dt>Data combinada</dt>
             <dd>{formatSaleDate(detail.agreed_settlement_date)}</dd>
           </div>
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col gap-1 min-[390px]:flex-row min-[390px]:justify-between min-[390px]:gap-4">
             <dt>Já pago</dt>
             <dd>
               {paidCents === null ? "—" : formatCents(paidCents)} de{" "}

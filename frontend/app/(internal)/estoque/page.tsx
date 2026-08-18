@@ -151,11 +151,11 @@ export default function EstoquePage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Estoque</h1>
 
       {/* --- Add a product ------------------------------------------------ */}
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4 sm:mt-8">
         <div>
           <label htmlFor="name" className={labelClassName}>
             Nome do produto
@@ -170,8 +170,8 @@ export default function EstoquePage() {
           />
         </div>
 
-        <div className="flex gap-4">
-          <div className="flex-1">
+        <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2">
+          <div>
             <label htmlFor="costPrice" className={labelClassName}>
               Preço de custo
             </label>
@@ -190,7 +190,7 @@ export default function EstoquePage() {
             />
           </div>
 
-          <div className="flex-1">
+          <div>
             <label htmlFor="salePrice" className={labelClassName}>
               Preço de venda
             </label>
@@ -235,7 +235,7 @@ export default function EstoquePage() {
       </form>
 
       {/* --- The list ----------------------------------------------------- */}
-      <div className="mt-12">
+      <div className="mt-10 sm:mt-12">
         {isLoading && <p className="text-sm text-zinc-500">Carregando…</p>}
 
         {!isLoading && listError && (
@@ -267,7 +267,7 @@ export default function EstoquePage() {
               // to match rows across re-renders, and indexes shift on delete.
               <li
                 key={product.id}
-                className="flex items-center justify-between gap-4 rounded-lg border border-zinc-200 px-4 py-4 dark:border-zinc-800"
+                className="flex flex-col items-stretch gap-3 rounded-lg border border-zinc-200 px-4 py-4 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between min-[480px]:gap-4 dark:border-zinc-800"
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium">{product.name}</p>
@@ -287,7 +287,7 @@ export default function EstoquePage() {
                   type="button"
                   onClick={() => void handleDelete(product)}
                   disabled={deletingId === product.id}
-                  className="shrink-0 rounded-lg px-4 py-3 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950"
+                  className="w-full shrink-0 rounded-lg px-4 py-3 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 min-[480px]:w-auto dark:hover:bg-red-950"
                 >
                   {deletingId === product.id ? "Excluindo…" : "Excluir"}
                 </button>

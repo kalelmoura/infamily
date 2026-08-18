@@ -580,20 +580,46 @@
 
 @media (max-width: 600px) {
   .page {
-    padding: 34px 18px 55px;
+    padding: 29px 16px 50px;
+  }
+
+  .pageHeader h1 {
+    font-size: clamp(2.8rem, 15vw, 3.6rem);
+  }
+
+  .pageHeader > p:last-child {
+    margin-top: 14px;
+    font-size: 0.92rem;
   }
 
   .workspaceGrid,
   .detailView {
-    margin-top: 30px;
+    margin-top: 26px;
+  }
+
+  .workspaceGrid {
+    gap: 14px;
+  }
+
+  .formPanel {
+    order: initial;
   }
 
   .listPanel,
   .formPanel,
   .profileCard,
   .historySection {
-    padding: 20px;
-    border-radius: 20px;
+    padding: 17px;
+    border-radius: 18px;
+  }
+
+  .panelHeader h2 {
+    font-size: 1.5rem;
+  }
+
+  .searchField,
+  .clientForm {
+    margin-top: 20px;
   }
 
   .nameGrid,
@@ -607,15 +633,57 @@
 
   .profileHeading {
     align-items: flex-start;
+    gap: 13px;
+  }
+
+  .profileAvatar {
+    width: 52px;
+    height: 52px;
+    font-size: 1.35rem;
+  }
+
+  .profileHeading h2 {
+    font-size: 1.9rem;
+  }
+
+  .contactGrid {
+    margin-top: 22px;
+  }
+
+  .clientRow {
+    min-height: 68px;
+    padding: 8px;
+    grid-template-columns: 40px minmax(0, 1fr) 18px;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .clientName {
+    flex-wrap: wrap;
   }
 
   .balanceCard {
+    margin-top: 14px;
+    padding: 20px;
     align-items: flex-start;
     flex-direction: column;
+    gap: 10px;
   }
 
   .balanceCard > span {
     text-align: left;
+  }
+
+  .historySection {
+    margin-top: 14px;
+  }
+
+  .historyCard {
+    padding: 15px;
   }
 }
 

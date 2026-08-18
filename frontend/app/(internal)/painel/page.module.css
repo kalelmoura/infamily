@@ -376,36 +376,75 @@
 
 @media (max-width: 760px) {
   .page {
-    padding: 38px 20px 58px;
+    padding: 30px 18px 54px;
   }
 
   .pageHeader h1 {
-    font-size: clamp(3.7rem, 18vw, 5rem);
+    margin-top: 10px;
+    font-size: clamp(3.25rem, 16vw, 4.35rem);
   }
 
   .subtitle {
-    margin-top: 19px;
+    margin-top: 17px;
+    font-size: 0.94rem;
   }
 
   .sections {
-    margin-top: 42px;
+    margin-top: 34px;
+    gap: 16px;
   }
 
   .secondaryGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .section {
+    border-radius: 20px;
   }
 
   .sectionHeader {
-    min-height: 100px;
-    padding: 22px;
+    min-height: 88px;
+    padding: 18px;
+  }
+
+  .sectionHeader h2 {
+    font-size: 1.75rem;
+  }
+
+  .countBadge {
+    width: 38px;
+    height: 38px;
   }
 
   .sectionBody {
-    padding: 12px;
+    padding: 10px;
   }
 
   .itemLink {
-    padding: 16px;
+    min-height: 78px;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .itemTopline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .itemMeta {
+    margin-top: 6px;
+  }
+
+  .itemArrow {
+    width: 31px;
+    height: 31px;
+  }
+
+  .stateCard {
+    margin-top: 34px;
+    padding: 20px;
   }
 
   .errorCard {
@@ -416,18 +455,12 @@
 
 @media (max-width: 440px) {
   .itemTopline {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 5px;
+    align-items: baseline;
+    gap: 10px;
   }
 
   .itemValue {
-    font-size: 1.15rem;
-  }
-
-  .itemArrow {
-    width: 31px;
-    height: 31px;
+    font-size: 1.08rem;
   }
 }
 

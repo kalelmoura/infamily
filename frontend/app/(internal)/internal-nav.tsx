@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import styles from "./layout.module.css";
 
@@ -153,10 +154,31 @@ function NavIcon({ name }: { name: NavIconName }) {
 
 export default function InternalNav() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <nav className={styles.nav} aria-label="Navegação interna">
-      <ul className={styles.navList}>
+    <nav
+      className={`${styles.nav} ${
+        isMobileMenuOpen ? styles.navOpen : ""
+      }`}
+      aria-label="Navegação interna"
+    >
+      <button
+        type="button"
+        className={styles.mobileMenuButton}
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="internal-navigation-list"
+        aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
+        onClick={() => setIsMobileMenuOpen((current) => !current)}
+      >
+        <span>Menu</span>
+        <span className={styles.mobileMenuIcon} aria-hidden="true">
+          <i />
+          <i />
+        </span>
+      </button>
+
+      <ul id="internal-navigation-list" className={styles.navList}>
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -169,6 +191,7 @@ export default function InternalNav() {
                   isActive ? styles.navLinkActive : ""
                 }`}
                 aria-current={isActive ? "page" : undefined}
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 <NavIcon name={item.icon} />
                 <span>{item.label}</span>

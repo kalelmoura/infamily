@@ -108,6 +108,10 @@
   margin-top: clamp(62px, 9vh, 96px);
 }
 
+.mobileMenuButton {
+  display: none;
+}
+
 .navList {
   display: flex;
   margin: 0;
@@ -259,21 +263,28 @@
   .workspace {
     display: block;
     padding: 0;
+    overflow-x: hidden;
   }
 
   .appShell {
     width: 100%;
     min-height: 100svh;
+    overflow: visible;
     border: 0;
     border-radius: 0;
   }
 
   .sidebar {
-    padding: 22px 18px 17px;
+    position: sticky;
+    z-index: 50;
+    top: 0;
+    display: block;
+    padding: 18px;
+    box-shadow: 0 14px 30px -24px rgba(48, 28, 20, 0.72);
   }
 
   .brand {
-    font-size: 1.7rem;
+    font-size: 1.62rem;
   }
 
   .brandBlock span {
@@ -281,17 +292,126 @@
   }
 
   .nav {
-    margin-top: 19px;
+    margin-top: 0;
+  }
+
+  .mobileMenuButton {
+    position: absolute;
+    top: 17px;
+    right: 18px;
+    display: flex;
+    min-width: 86px;
+    min-height: 43px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 250, 243, 0.24);
+    border-radius: 999px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #fffaf3;
+    background: rgba(255, 250, 243, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .mobileMenuButton:focus-visible {
+    outline: 3px solid rgba(255, 250, 243, 0.52);
+    outline-offset: 3px;
+  }
+
+  .mobileMenuIcon {
+    position: relative;
+    display: block;
+    width: 15px;
+    height: 12px;
+  }
+
+  .mobileMenuIcon i {
+    position: absolute;
+    left: 0;
+    display: block;
+    width: 15px;
+    height: 1.5px;
+    border-radius: 999px;
+    background: currentColor;
+    transition:
+      top 180ms ease,
+      transform 180ms ease;
+  }
+
+  .mobileMenuIcon i:first-child {
+    top: 2px;
+  }
+
+  .mobileMenuIcon i:last-child {
+    top: 9px;
+  }
+
+  .navOpen .mobileMenuIcon i:first-child {
+    top: 5px;
+    transform: rotate(45deg);
+  }
+
+  .navOpen .mobileMenuIcon i:last-child {
+    top: 5px;
+    transform: rotate(-45deg);
+  }
+
+  .navList {
+    display: grid;
+    max-height: 0;
+    margin-top: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    pointer-events: none;
+    transition:
+      max-height 240ms cubic-bezier(0.22, 0.9, 0.3, 1),
+      margin-top 240ms cubic-bezier(0.22, 0.9, 0.3, 1),
+      opacity 160ms ease,
+      visibility 0s linear 240ms;
+  }
+
+  .navOpen .navList {
+    max-height: 260px;
+    margin-top: 18px;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  .navList li {
+    min-width: 0;
   }
 
   .navLink {
-    min-height: 42px;
-    padding: 0 13px;
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border-radius: 13px;
+    font-size: 0.76rem;
+  }
+
+  .navLink:hover {
+    transform: none;
+  }
+
+  .contentPanel {
+    overflow-x: hidden;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .navLink {
+  .navLink,
+  .navList,
+  .mobileMenuIcon i {
     transition: none;
   }
 }
