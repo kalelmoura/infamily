@@ -392,7 +392,7 @@
 
   .formPanel {
     display: flex;
-    padding: 24px 24px 28px;
+    padding: 24px 24px 46px;
     overflow-y: auto;
     flex-direction: column;
   }
@@ -406,11 +406,13 @@
   .formContent h1 {
     font-size: clamp(2.15rem, 9.5vw, 2.55rem);
     line-height: 1;
+    text-align: center;
   }
 
   .intro {
     margin-top: 7px;
     font-size: 0.86rem;
+    text-align: center;
   }
 
   .form {
