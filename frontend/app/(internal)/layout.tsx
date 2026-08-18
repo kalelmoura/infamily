@@ -18,7 +18,7 @@ export default function InternalLayout({
       <header className="border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-            In Family
+            In family
           </Link>
 
           <nav aria-label="Navegação interna">

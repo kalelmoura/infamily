@@ -2,89 +2,185 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Newsreader } from "next/font/google";
 import { useRouter } from "next/navigation";
+
 import { createClient } from "@/lib/supabase";
 
+import styles from "./page.module.css";
+
+const editorialFont = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-editorial",
+  display: "swap",
+});
+
+function EyeIcon({ passwordVisible }: { passwordVisible: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2.8 12s3.35-5 9.2-5 9.2 5 9.2 5-3.35 5-9.2 5-9.2-5-9.2-5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="2.6"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+      {passwordVisible && (
+        <path
+          d="m4.5 4.5 15 15"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+      )}
+    </svg>
+  );
+}
+
 export default function LoginPage() {
-  // Controlled-input state for the email/password fields.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // Holds the message shown to the user after a failed login attempt.
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  // Lets us redirect programmatically after a successful login.
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
-  // Runs when the form is submitted (Enter key or the "Entrar" button).
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    // Stop the browser's default full-page form submission/reload.
     event.preventDefault();
-    // Clear any error left over from a previous failed attempt.
+    if (isSubmitting) return;
+
     setErrorMessage("");
+    setIsSubmitting(true);
 
-    // Supabase client used to call Auth on the client side.
-    const supabase = createClient();
-    // Attempt to sign in with email + password against Supabase Auth.
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      // Generic message on purpose: don't reveal whether the email exists.
-      setErrorMessage("E-mail ou senha incorretos.");
-      return;
+      if (error) {
+        setErrorMessage("E-mail ou senha incorretos.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Replace keeps the login screen out of the browser history after entry.
+      router.replace("/dashboard");
+    } catch {
+      setErrorMessage(
+        "Não foi possível entrar. Verifique sua conexão e tente novamente.",
+      );
+      setIsSubmitting(false);
     }
-
-  const { data } = await supabase.auth.getSession();
-  console.log(data.session?.access_token);
-
-    // Successful login: send the admin to the protected dashboard.
-    router.push("/dashboard");
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+    <main className={`${styles.page} ${editorialFont.variable}`}>
+      <section className={styles.loginShell} aria-labelledby="login-title">
+        <aside className={styles.brandPanel}>
+          <Link
+            href="/"
+            className={styles.brandLink}
+            aria-label="Voltar à página inicial da In family"
+          >
+            In family
+          </Link>
 
-     <h1 className="text-2xl font-semibold tracking-tight">Acesso Administrativo</h1>
+          <div className={styles.brandCopy}>
+            <p>Gestão simples</p>
+            <h2>
+              <span>Suas métricas</span>
+              <span>estoque e base de clientes</span>
+              <span>tudo em um só lugar.</span>
+            </h2>
+          </div>
+        </aside>
 
-     {/* Native <form> so Enter submits and onSubmit fires handleSubmit above. */}
-     <form onSubmit={handleSubmit}>
-      {/* Controlled email input: value/onChange keep it in sync with state. */}
-      <input
-      className="mt-3 text-sm text-zinc-500"
-      type="email"
-      placeholder="seu email"
-      value={email}
-      onChange={(event) => setEmail(event.target.value)}
-      />
+        <div className={styles.formPanel}>
+          <div className={styles.formContent}>
+            <h1 id="login-title">Olá, Yasmin</h1>
+            <p className={styles.intro}>Entre para acompanhar sua loja.</p>
 
-      {/* Controlled password input; type="password" masks the characters. */}
-      <input
-      className="mt-3 text-sm text-zinc-500"
-      type="password"
-      placeholder="sua senha"
-      value={password}
-      onChange={(event) => setPassword(event.target.value)}
-      />
+            <form className={styles.form} onSubmit={handleSubmit}>
+              <div className={styles.field}>
+                <label htmlFor="email">E-mail</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="Digite seu e-mail"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  aria-invalid={Boolean(errorMessage)}
+                  aria-describedby={errorMessage ? "login-error" : undefined}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
 
-      <button
-      type="submit"
-      >Entrar</button>
+              <div className={styles.field}>
+                <label htmlFor="password">Senha</label>
+                <div className={styles.passwordField}>
+                  <input
+                    id="password"
+                    name="password"
+                    type={passwordVisible ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="Digite sua senha"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    aria-invalid={Boolean(errorMessage)}
+                    aria-describedby={errorMessage ? "login-error" : undefined}
+                    disabled={isSubmitting}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className={styles.passwordToggle}
+                    onClick={() => setPasswordVisible((visible) => !visible)}
+                    aria-label={
+                      passwordVisible ? "Ocultar senha" : "Mostrar senha"
+                    }
+                    aria-pressed={passwordVisible}
+                    disabled={isSubmitting}
+                  >
+                    <EyeIcon passwordVisible={passwordVisible} />
+                  </button>
+                </div>
+              </div>
 
-      {/* Only rendered once handleSubmit sets a non-empty errorMessage. */}
-      {errorMessage && (
-        <p className="mt-3 text-sm text-red-600">{errorMessage}</p>
-      )}
+              {errorMessage && (
+                <p id="login-error" className={styles.error} role="alert">
+                  {errorMessage}
+                </p>
+              )}
 
-      </form>
-
-      {/* Escape hatch back to the public landing page. */}
-      <Link
-        href="/"
-        className="mt-10 text-sm text-zinc-400 underline-offset-4 transition-colors hover:text-zinc-600"
-      >
-        Voltar
-      </Link>
+              <button
+                type="submit"
+                className={styles.submitButton}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Entrando..." : "Entrar"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

@@ -16,7 +16,7 @@ const whatsappNumber = (
   process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? fallbackWhatsappNumber
 ).replace(/\D/g, "");
 const whatsappMessage =
-  "Olá! Vim pelo site da In Family e gostaria de conhecer as peças.";
+  "Olá! Vim pelo site da In family e gostaria de conhecer as peças.";
 const whatsappHref = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 const instagramHref =
   process.env.NEXT_PUBLIC_INSTAGRAM_URL ??
@@ -44,9 +44,9 @@ const values = [
 ];
 
 export const metadata: Metadata = {
-  title: "In Family | Moda feminina para a vida real",
+  title: "In family | Moda feminina para a vida real",
   description:
-    "Moda feminina com conforto, estilo e cuidado. Por família pra família. Fale com a In Family pelo WhatsApp.",
+    "Moda feminina com conforto, estilo e cuidado. Por família pra família. Fale com a In family pelo WhatsApp.",
 };
 
 function WhatsappIcon() {
@@ -128,9 +128,9 @@ export default function Home() {
           <Link
             href="/"
             className={styles.brand}
-            aria-label="Página inicial da In Family"
+            aria-label="Página inicial da In family"
           >
-            In Family
+            In family
           </Link>
 
           <a
@@ -138,7 +138,7 @@ export default function Home() {
             className={styles.headerContact}
             target="_blank"
             rel="noreferrer"
-            aria-label="Conversar com a In Family pelo WhatsApp"
+            aria-label="Conversar com a In family pelo WhatsApp"
           >
             <span>Conversar no WhatsApp</span>
             <ArrowIcon />
@@ -180,7 +180,7 @@ export default function Home() {
                   className={styles.instagramButton}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label="Conheça a In Family no Instagram"
+                  aria-label="Conheça a In family no Instagram"
                 >
                   <InstagramIcon />
                   <span>Conheça a marca</span>
@@ -215,7 +215,7 @@ export default function Home() {
                   Conforto, beleza e cuidado para acompanhar a vida como ela é.
                 </h2>
                 <p className={styles.storyCopy}>
-                  Na In Family, cada escolha nasce do desejo de vestir bem sem
+                  Na In family, cada escolha nasce do desejo de vestir bem sem
                   deixar de lado o que importa: sentir-se à vontade, bonita e
                   pronta para aproveitar cada momento.
                 </p>
@@ -244,7 +244,7 @@ export default function Home() {
             <div className={styles.contactAction}>
               <p>
                 Conheça as peças, veja o que chegou e encontre seus próximos
-                favoritos no catálogo da In Family.
+                favoritos no catálogo da In family.
               </p>
               <Link href="/catalogo" className={styles.secondaryButton}>
                 <span>Veja o catálogo</span>
@@ -258,13 +258,13 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.footerTop}>
           <Link href="/" className={styles.footerBrand}>
-            In Family
+            In family
           </Link>
           <p>Moda feminina, com carinho para a vida real.</p>
         </div>
 
         <div className={styles.footerBottom}>
-          <span>© {new Date().getFullYear()} In Family</span>
+          <span>© {new Date().getFullYear()}</span>
           <Link href="/login" className={styles.adminLink}>
             Acesso administrativo
           </Link>

@@ -335,29 +335,35 @@
 
 .storyLead {
   display: grid;
-  grid-template-columns: minmax(150px, 0.34fr) minmax(0, 1.66fr);
-  gap: clamp(36px, 8vw, 130px);
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(24px, 2.5vw, 36px);
   align-items: start;
+  justify-items: center;
+  text-align: center;
+}
+
+.storyLead > div {
+  width: 100%;
 }
 
 .sectionLabel {
-  padding-top: 13px;
+  padding-top: 0;
   color: var(--clay);
 }
 
 .storyLead h2 {
-  max-width: 960px;
-  margin: 0;
+  max-width: 1100px;
+  margin: 0 auto;
   font-family: var(--font-editorial), Georgia, serif;
-  font-size: clamp(2.8rem, 5.7vw, 5.2rem);
+  font-size: clamp(2.8rem, 4.8vw, 4.6rem);
   font-weight: 430;
   letter-spacing: -0.05em;
-  line-height: 0.98;
+  line-height: 1.01;
 }
 
 .storyCopy {
-  max-width: 720px;
-  margin: 34px 0 0;
+  max-width: 760px;
+  margin: 30px auto 0;
   color: var(--ink-soft);
   font-size: clamp(1rem, 1.35vw, 1.18rem);
   line-height: 1.8;
@@ -573,7 +579,6 @@
 
 @media (max-width: 900px) {
   .heroIntro,
-  .storyLead,
   .contactCard {
     grid-template-columns: 1fr;
   }
@@ -596,11 +601,17 @@
   }
 
   .storyLead {
-    gap: 34px;
+    gap: 24px;
+    justify-items: start;
+    text-align: left;
   }
 
-  .sectionLabel {
-    padding-top: 0;
+  .storyLead h2 {
+    margin: 0;
+  }
+
+  .storyCopy {
+    margin: 30px 0 0;
   }
 
   .valueGrid {
