@@ -16,7 +16,7 @@
   padding: 8px;
   color: var(--internal-ink);
   background: var(--internal-cream);
-  color-scheme: light;
+  color-scheme: only light;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 

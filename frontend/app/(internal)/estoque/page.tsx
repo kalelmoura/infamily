@@ -15,7 +15,7 @@ function messageFrom(error: unknown, fallback: string): string {
 // Repeated Tailwind strings, named once so the JSX below stays readable and
 // every field keeps the same generous touch target.
 const inputClassName =
-  "w-full rounded-lg border border-zinc-300 bg-transparent px-4 py-3 text-base outline-none focus:border-zinc-500 dark:border-zinc-700 dark:focus:border-zinc-500";
+  "w-full rounded-lg border border-zinc-300 bg-transparent px-4 py-3 text-base outline-none focus:border-zinc-500";
 const labelClassName = "block text-sm text-zinc-500";
 
 export default function EstoquePage() {
@@ -226,7 +226,7 @@ export default function EstoquePage() {
           // Disabled while the request is in flight: the cheapest way to stop
           // an impatient double-tap from creating the product twice.
           disabled={isSaving}
-          className="rounded-lg bg-zinc-900 px-4 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          className="rounded-lg bg-zinc-900 px-4 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
         >
           {isSaving ? "Salvando…" : "Adicionar produto"}
         </button>
@@ -267,7 +267,7 @@ export default function EstoquePage() {
               // to match rows across re-renders, and indexes shift on delete.
               <li
                 key={product.id}
-                className="flex flex-col items-stretch gap-3 rounded-lg border border-zinc-200 px-4 py-4 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between min-[480px]:gap-4 dark:border-zinc-800"
+                className="flex flex-col items-stretch gap-3 rounded-lg border border-zinc-200 px-4 py-4 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between min-[480px]:gap-4"
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium">{product.name}</p>
@@ -287,7 +287,7 @@ export default function EstoquePage() {
                   type="button"
                   onClick={() => void handleDelete(product)}
                   disabled={deletingId === product.id}
-                  className="w-full shrink-0 rounded-lg px-4 py-3 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 min-[480px]:w-auto dark:hover:bg-red-950"
+                  className="w-full shrink-0 rounded-lg px-4 py-3 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 min-[480px]:w-auto"
                 >
                   {deletingId === product.id ? "Excluindo…" : "Excluir"}
                 </button>

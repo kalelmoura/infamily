@@ -34,10 +34,10 @@ const STATUS_LABELS: Record<FiadoStatus, string> = {
 // should be able to spot without reading. Amber warns, neutral reassures, and a
 // settled debt fades into the background instead of competing for attention.
 const STATUS_BADGE_CLASSES: Record<FiadoStatus, string> = {
-  overdue: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400",
-  due_soon: "bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-400",
-  current: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  paid_off: "bg-zinc-50 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500",
+  overdue: "bg-red-50 text-red-700",
+  due_soon: "bg-amber-50 text-amber-800",
+  current: "bg-zinc-100 text-zinc-700",
+  paid_off: "bg-zinc-50 text-zinc-400",
 };
 
 const FREQUENCY_LABELS: Record<FiadoFrequency, string> = {
@@ -239,7 +239,7 @@ function FiadoPageContent() {
                   <button
                     type="button"
                     onClick={() => handleOpen(fiado)}
-                    className="w-full rounded-lg border border-zinc-200 px-4 py-4 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                    className="w-full rounded-lg border border-zinc-200 px-4 py-4 text-left transition-colors hover:bg-zinc-50"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <p className="min-w-0 truncate font-medium">
@@ -294,7 +294,7 @@ function FiadoPageContent() {
                 // impatient double-tap from recording two installments — and
                 // for a settled debt, where the backend would refuse anyway.
                 disabled={isPaying || detail.status === "paid_off"}
-                className="w-full rounded-lg bg-zinc-900 px-4 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                className="w-full rounded-lg bg-zinc-900 px-4 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
               >
                 {isPaying ? "Registrando…" : "Marcar parcela como paga"}
               </button>
@@ -348,7 +348,7 @@ function FiadoDetailView({ detail }: { detail: FiadoDetail }) {
       </div>
 
       {/* --- The numbers that matter -------------------------------------- */}
-      <div className="mt-6 rounded-lg border border-zinc-200 px-4 py-4 dark:border-zinc-800">
+      <div className="mt-6 rounded-lg border border-zinc-200 px-4 py-4">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-base">Saldo devedor</span>
           <span
@@ -406,7 +406,7 @@ function FiadoDetailView({ detail }: { detail: FiadoDetail }) {
         {detail.items.map((item) => (
           <li
             key={item.id}
-            className="flex items-baseline justify-between gap-4 rounded-lg border border-zinc-200 px-4 py-4 dark:border-zinc-800"
+            className="flex items-baseline justify-between gap-4 rounded-lg border border-zinc-200 px-4 py-4"
           >
             <div className="min-w-0">
               <p className="truncate font-medium">{item.product_name}</p>

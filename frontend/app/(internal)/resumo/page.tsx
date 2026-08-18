@@ -11,7 +11,7 @@ function messageFrom(error: unknown, fallback: string): string {
 }
 
 const inputClassName =
-  "w-full rounded-lg border border-zinc-300 bg-transparent px-4 py-3 text-base outline-none focus:border-zinc-500 dark:border-zinc-700 dark:focus:border-zinc-500";
+  "w-full rounded-lg border border-zinc-300 bg-transparent px-4 py-3 text-base outline-none focus:border-zinc-500";
 const labelClassName = "block text-sm text-zinc-500";
 
 function summaryPath(startDate: string, endDate: string): string {
@@ -107,7 +107,7 @@ export default function ResumoPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="flex-1 rounded-lg bg-zinc-900 px-4 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            className="flex-1 rounded-lg bg-zinc-900 px-4 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
           >
             {isLoading ? "Carregando…" : "Aplicar filtro"}
           </button>
@@ -116,7 +116,7 @@ export default function ResumoPage() {
             type="button"
             onClick={() => void handleClearFilter()}
             disabled={isLoading || (!startDate && !endDate)}
-            className="w-full rounded-lg border border-zinc-300 px-4 py-4 text-base font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 min-[420px]:w-auto dark:border-zinc-700 dark:hover:bg-zinc-900"
+            className="w-full rounded-lg border border-zinc-300 px-4 py-4 text-base font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 min-[420px]:w-auto"
           >
             Limpar
           </button>
@@ -146,7 +146,7 @@ export default function ResumoPage() {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-zinc-200 px-4 py-5 dark:border-zinc-800">
+    <div className="rounded-lg border border-zinc-200 px-4 py-5">
       <p className="text-sm text-zinc-500">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-tight">
         {formatMoney(value)}

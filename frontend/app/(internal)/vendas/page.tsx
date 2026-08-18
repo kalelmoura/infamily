@@ -69,7 +69,7 @@ function messageFrom(error: unknown, fallback: string): string {
 }
 
 const inputClassName =
-  "w-full rounded-lg border border-zinc-300 bg-transparent px-4 py-3 text-base outline-none focus:border-zinc-500 dark:border-zinc-700 dark:focus:border-zinc-500";
+  "w-full rounded-lg border border-zinc-300 bg-transparent px-4 py-3 text-base outline-none focus:border-zinc-500";
 const labelClassName = "block text-sm text-zinc-500";
 
 export default function VendasPage() {
@@ -663,7 +663,7 @@ export default function VendasPage() {
               type="button"
               onClick={handleAddLine}
               disabled={productToAdd === ""}
-              className="w-full shrink-0 rounded-lg border border-zinc-300 px-5 py-3 text-base font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 min-[480px]:w-auto dark:border-zinc-700 dark:hover:bg-zinc-900"
+              className="w-full shrink-0 rounded-lg border border-zinc-300 px-5 py-3 text-base font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 min-[480px]:w-auto"
             >
               Adicionar
             </button>
@@ -696,7 +696,7 @@ export default function VendasPage() {
               return (
                 <li
                   key={line.key}
-                  className="rounded-lg border border-zinc-200 px-4 py-4 dark:border-zinc-800"
+                  className="rounded-lg border border-zinc-200 px-4 py-4"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <p className="min-w-0 truncate font-medium">
@@ -705,7 +705,7 @@ export default function VendasPage() {
                     <button
                       type="button"
                       onClick={() => removeLine(line.key)}
-                      className="shrink-0 rounded-lg px-3 py-1 text-sm text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950"
+                      className="shrink-0 rounded-lg px-3 py-1 text-sm text-red-600 transition-colors hover:bg-red-50"
                     >
                       Remover
                     </button>
@@ -777,7 +777,7 @@ export default function VendasPage() {
         )}
 
         {lines.length > 0 && (
-          <div className="flex items-baseline justify-between border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="flex items-baseline justify-between border-t border-zinc-200 pt-4">
             <span className="text-base">Total da venda</span>
             <span className="text-xl font-semibold">
               {total === null ? "—" : formatCents(total)}
@@ -825,7 +825,7 @@ export default function VendasPage() {
 
         {/* --- Fiado terms, only when the sale is on credit ---------------- */}
         {paymentMethod === "fiado" && (
-          <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 px-4 py-4 dark:border-zinc-800">
+          <div className="flex flex-col gap-4 rounded-lg border border-zinc-200 px-4 py-4">
             <p className="text-sm text-zinc-500">
               Dados do fiado
             </p>
@@ -909,7 +909,7 @@ export default function VendasPage() {
           // double-tap from recording the sale twice — which would deduct stock
           // twice, too.
           disabled={isSaving}
-          className="rounded-lg bg-zinc-900 px-4 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          className="rounded-lg bg-zinc-900 px-4 py-4 text-base font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50"
         >
           {isSaving
             ? "Registrando…"
@@ -920,7 +920,7 @@ export default function VendasPage() {
 
         {formError && <p className="text-sm text-red-600">{formError}</p>}
         {successMessage && (
-          <p className="text-sm text-green-700 dark:text-green-500">
+          <p className="text-sm text-green-700">
             {successMessage}
           </p>
         )}
@@ -960,7 +960,7 @@ export default function VendasPage() {
               {sales.map((sale) => (
                 <li
                   key={sale.id}
-                  className="rounded-lg border border-zinc-200 px-4 py-4 dark:border-zinc-800"
+                  className="rounded-lg border border-zinc-200 px-4 py-4"
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="font-medium">

@@ -629,11 +629,20 @@
   }
 
   .headerContact {
-    font-size: 0.72rem;
+    min-height: 34px;
+    gap: 8px;
+    font-size: 0.64rem;
+    letter-spacing: 0.025em;
+    line-height: 1;
   }
 
   .headerContact span {
     white-space: nowrap;
+  }
+
+  .headerContact svg {
+    width: 15px;
+    height: 15px;
   }
 
   .hero {
@@ -672,15 +681,22 @@
   }
 
   .heroImage {
-    object-position: 52% center;
+    object-position: 34% center;
   }
 
   .photoCaption {
-    right: 14px;
-    bottom: 14px;
-    min-height: 36px;
-    padding: 0 13px;
-    font-size: 0.6rem;
+    right: 10px;
+    bottom: 10px;
+    min-height: 29px;
+    gap: 7px;
+    padding: 0 10px;
+    font-size: 0.5rem;
+    letter-spacing: 0.07em;
+  }
+
+  .photoCaption span {
+    width: 4px;
+    height: 4px;
   }
 
   .storyLead h2 {
