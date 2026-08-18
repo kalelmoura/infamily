@@ -191,7 +191,7 @@ export default function Home() {
 
           <figure className={styles.heroPhoto}>
             <Image
-              src="/images/infamily-family-hero.png"
+              src="/images/infamily-family-hero-v2.png"
               alt="Família reunida e sorrindo em uma varanda iluminada"
               fill
               priority
