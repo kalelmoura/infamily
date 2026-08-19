@@ -22,7 +22,12 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.models.fiado import FiadoAccount
 from app.models.sale import Sale, SaleItem
-from app.schemas.fiado import FiadoDetailItemRead, FiadoDetailRead, FiadoRead
+from app.schemas.fiado import (
+    FiadoDetailItemRead,
+    FiadoDetailRead,
+    FiadoListRead,
+    FiadoRead,
+)
 from app.services.fiado import (
     STATUS_ORDER,
     FiadoError,
@@ -64,8 +69,22 @@ def _to_fiado_read(fiado: FiadoAccount, today: date) -> FiadoRead:
     )
 
 
+def _to_fiado_list_read(fiado: FiadoAccount, today: date) -> FiadoListRead:
+    """Add searchable product names to the ordinary fiado summary."""
+    summary = _to_fiado_read(fiado, today)
+
+    return FiadoListRead(
+        **summary.model_dump(),
+        # A sale may contain the same product on more than one discounted line.
+        # The list needs each name only once for search, in its original order.
+        product_names=list(
+            dict.fromkeys(item.product.name for item in fiado.sale.items)
+        ),
+    )
+
+
 @router.get("")
-async def list_fiados(db: AsyncSession = Depends(get_db)) -> list[FiadoRead]:
+async def list_fiados(db: AsyncSession = Depends(get_db)) -> list[FiadoListRead]:
     """List every fiado with its derived status — the collection screen.
 
     Ordered so the ones that need chasing come first: overdue, then due soon,
@@ -81,7 +100,10 @@ async def list_fiados(db: AsyncSession = Depends(get_db)) -> list[FiadoRead]:
     """
     result = await db.execute(
         select(FiadoAccount).options(
-            selectinload(FiadoAccount.sale).selectinload(Sale.client)
+            selectinload(FiadoAccount.sale).selectinload(Sale.client),
+            selectinload(FiadoAccount.sale)
+            .selectinload(Sale.items)
+            .selectinload(SaleItem.product),
         )
     )
     fiados = result.scalars().all()
@@ -91,7 +113,7 @@ async def list_fiados(db: AsyncSession = Depends(get_db)) -> list[FiadoRead]:
     # different days.
     today = today_in_store()
 
-    responses = [_to_fiado_read(fiado, today) for fiado in fiados]
+    responses = [_to_fiado_list_read(fiado, today) for fiado in fiados]
     responses.sort(key=lambda item: (STATUS_ORDER[item.status], item.next_due_date))
 
     return responses

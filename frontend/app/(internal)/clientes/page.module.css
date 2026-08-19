@@ -177,6 +177,16 @@
   gap: 8px;
 }
 
+.standaloneClientList {
+  gap: 12px;
+}
+
+.standaloneClientList .clientRow {
+  border-color: var(--internal-line);
+  background: #fffdf9;
+  box-shadow: 0 18px 42px -36px rgba(78, 51, 36, 0.38);
+}
+
 .clientRow {
   display: grid;
   width: 100%;

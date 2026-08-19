@@ -88,7 +88,7 @@ class FiadoTermsCreate(BaseModel):
 
 
 class FiadoRead(BaseModel):
-    """A fiado as the collection list shows it: terms, balance, and status."""
+    """The shared fiado summary: terms, balance, and derived status."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -111,6 +111,12 @@ class FiadoRead(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+
+class FiadoListRead(FiadoRead):
+    """A collection-list row with the product names needed for local search."""
+
+    product_names: list[str]
 
 
 class FiadoDetailItemRead(BaseModel):

@@ -236,7 +236,7 @@ function LowStockSection({ items }: { items: DashboardLowStockProduct[] }) {
           <ul className={styles.itemList}>
             {items.map((item) => (
               <li key={item.id}>
-                <Link href="/estoque" className={styles.itemLink}>
+                <Link href="/estoque/produtos" className={styles.itemLink}>
                   <div className={styles.itemContent}>
                     <p className={styles.itemName}>{item.name}</p>
                     <div className={styles.itemMeta}>

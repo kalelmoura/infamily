@@ -242,11 +242,15 @@ infamily/                     # (brand displayed as: infamily)
 │   │   │   ├── layout.tsx             # Session guard + navigation
 │   │   │   ├── painel/page.tsx        # Overdue + due soon + low stock
 │   │   │   ├── estoque/
-│   │   │   │   ├── page.tsx           # Item list
-│   │   │   │   ├── nova/page.tsx      # Create item
+│   │   │   │   ├── page.tsx           # Create item + link to product list
+│   │   │   │   ├── produtos/page.tsx  # Searchable item list
 │   │   │   │   └── [id]/page.tsx      # Item detail / edit
-│   │   │   ├── vendas/page.tsx         # Record sales + sales history
-│   │   │   ├── clientes/page.tsx       # Search, create, and client detail
+│   │   │   ├── vendas/
+│   │   │   │   ├── page.tsx           # Record a sale + history link
+│   │   │   │   └── recentes/page.tsx  # Searchable sales history
+│   │   │   ├── clientes/
+│   │   │   │   ├── page.tsx           # Create client + list link
+│   │   │   │   └── todos/page.tsx     # Searchable list + client detail
 │   │   │   ├── fiado/page.tsx          # Collection list + detail/payment
 │   │   │   └── resumo/page.tsx        # Financial summary
 │   │   ├── login/page.tsx             # Admin login
@@ -290,19 +294,19 @@ infamily/                     # (brand displayed as: infamily)
 
 ## 7. Pages
 
-The **Landing page** (`/`, public) is the brand's front door. In the MVP it contains the inf.amily identity, the tagline (UI, pt-BR) "por família – pra família", basic store info, a WhatsApp/contact button, and a **discreet admin access link** (to the login). It shows no internal data. It should be structured so it can later host a **product showcase** — but that showcase is **not built now** (see section 14).
+The **Landing page** (`/`, public) is the brand's front door. In the MVP it contains the inf.amily identity, the tagline (UI, pt-BR) "por família – pra família", basic store info, WhatsApp actions for `+55 11 91078-1697`, and a **discreet admin access link** (to the login). It shows no internal data. It should be structured so it can later host a **product showcase** — but that showcase is **not built now** (see section 14).
 
 The **login screen** (`/login`, public) — admin login with email and password and a sign-in button. Reached from the discreet link on the landing. On success it redirects to the internal home.
 
 The **internal home** (`/painel`, protected) — the first screen after login: overdue fiados at the top (red), then fiados due soon, and a simple low/zero stock notice. No charts. `/dashboard` is retained only as a compatibility redirect to `/painel`.
 
-**Inventory** — item list (`/estoque`) showing name, sale price, and quantity (highlighting low stock); create (`/estoque/nova`) with name, cost, sale price, and quantity; detail/edit (`/estoque/[id]`) of the same fields.
+**Inventory** — create (`/estoque`) with name, cost, sale price, and quantity, plus a prominent "Produtos" action; searchable item list (`/estoque/produtos`) showing name, prices, and quantity (highlighting low stock); detail/edit (`/estoque/[id]`) of the same fields.
 
-**Sales** — `/vendas` combines sale registration and history. Select or add a client inline, choose items and quantities, watch the total update, choose payment method and date, and confirm. Immediate sales default to "Cliente avulso". Fiado uses the same flow with a required registered client plus agreed date, frequency, and installment count.
+**Sales** — `/vendas` focuses on sale registration and links to the searchable history at `/vendas/recentes`. Select or add a client inline, choose items and quantities, watch the total update, choose payment method and date, and confirm. Immediate sales default to "Cliente avulso". Fiado uses the same flow with a required registered client plus agreed date, frequency, and installment count. The history can be searched by client or product name.
 
-**Clients** — `/clientes` has a searchable list, registration form, and client detail showing contact information, purchase history, and outstanding fiado total.
+**Clients** — `/clientes` focuses on client registration and links to the searchable list at `/clientes/todos`. The list searches by name or phone and opens a client detail showing contact information, purchase history, and outstanding fiado total.
 
-**Fiado** — `/fiado` is the collection screen: who owes, status (overdue/due soon/paid off), next date, and balance. Its detail view shows items taken, terms, balance, next date, and the "mark installment as paid" button.
+**Fiado** — `/fiado` is the collection screen: who owes, status (overdue/due soon/paid off), next date, and balance, searchable by client or product name. Its detail view shows items taken, terms, balance, next date, and the "mark installment as paid" button.
 
 **Financial summary** (UI: "Métricas", `/resumo`, protected) — five direct numbers: total sold, total cost, total profit, received (entries), and to receive. Optional simple period filter over sales.
 
@@ -358,7 +362,7 @@ All data endpoints require a valid Supabase token in `Authorization: Bearer <tok
 
 | Method | Route                 | Description                                                                                                                                  |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/fiado`          | List fiados with derived status (clients / collection).                                                                                      |
+| GET    | `/api/fiado`          | List fiados with derived status and product names for collection search.                                                                     |
 | GET    | `/api/fiado/{id}`     | Detail: client, items taken, terms, balance, next date.                                                                                      |
 | POST   | `/api/fiado/{id}/pay` | Record an installment payment: reduce the balance by the installment amount (never negative) and advance the next date if a balance remains. |
 
@@ -383,11 +387,11 @@ All data endpoints require a valid Supabase token in `Authorization: Bearer <tok
 
 The **AuthGuard / protected layout** checks the session before rendering internal screens.
 
-The **ProductForm** (create and edit item) and **ProductListItem** (inventory list row); the **StockBadge** flags low/zero stock.
+The **ProductForm** (create and edit item) and searchable **ProductListItem** collection (inventory list row); the **StockBadge** flags low/zero stock.
 
-The **SaleForm** with a searchable **ClientPicker**, inline client creation, **ProductPicker** (select items and quantities, total updating live), **PaymentMethodSelect**, and a date picker. Reused by both the immediate-sale and fiado flows, with extra fiado fields when applicable.
+The **SaleForm** with a searchable **ClientPicker**, inline client creation, **ProductPicker** (select items and quantities, total updating live), **PaymentMethodSelect**, and a date picker. Reused by both the immediate-sale and fiado flows, with extra fiado fields when applicable. The separate sales history filters by client or product name.
 
-The **ClientList**, **ClientForm**, and client detail with purchase history and open balance. The **FiadoForm** (agreed date, frequency, number of installments), **FiadoListItem**, and **PayInstallmentButton** handle collection.
+The focused **ClientForm** links to a separate searchable **ClientList**, whose detail view shows purchase history and open balance. The **FiadoForm** (agreed date, frequency, number of installments), searchable **FiadoListItem** collection, and **PayInstallmentButton** handle collection.
 
 The **StatusBadge** (reused): red for overdue, amber for due soon, neutral for current, subtle for paid off.
 
@@ -449,13 +453,13 @@ Sequence prioritizing getting the inventory → sale → deduction cycle working
 
 **Phase 1 — Authentication.** Admin login with Supabase Auth, session via `@supabase/ssr`, route guarding, and JWT verification on the backend (against the JWKS endpoint).
 
-**Phase 2 — Inventory.** `products` table and item CRUD. Done when: the owner creates, lists, and edits items with cost, sale price, and quantity.
+**Phase 2 — Inventory.** `products` table and item CRUD. Done when: the owner creates, searches, lists, and edits items with cost, sale price, and quantity.
 
-**Phase 3 — Sales (immediate).** `sales` and `sale_items` tables; record a sale with item selection, stock deduction in a transaction, price snapshotting, and total computation. Done when: recording a sale correctly reduces stock and the sale appears in history.
+**Phase 3 — Sales (immediate).** `sales` and `sale_items` tables; record a sale with item selection, stock deduction in a transaction, price snapshotting, total computation, and searchable history. Done when: recording a sale correctly reduces stock and the sale appears in history searchable by client or product.
 
-**Phase 4 — Fiado.** `fiado_accounts` table; the fiado-sale flow (same stock deduction + fiado creation) and installment payment (balance + date advance + status). Done when: record a fiado, see it in collection, mark an installment paid, and watch the status change.
+**Phase 4 — Fiado.** `fiado_accounts` table; the fiado-sale flow (same stock deduction + fiado creation), collection search, and installment payment (balance + date advance + status). Done when: record a fiado, find it by client or product, mark an installment paid, and watch the status change.
 
-**Phase 4.1 — Clients.** `clients` table linked to every sale; protected walk-in profile, client CRUD/search/detail, sales history, open-fiado balance, and client selection in the sale flow.
+**Phase 4.1 — Clients.** `clients` table linked to every sale; focused registration, separate search/detail, protected walk-in profile, client CRUD, sales history, open-fiado balance, and client selection in the sale flow.
 
 **Phase 5 — Dashboard.** Overdue at the top (red), due soon, and a low-stock notice.
 
@@ -473,9 +477,9 @@ What ships in the first release:
 
 1. Public infamily landing with the tagline "por família – pra família", basic info, contact/WhatsApp, and discreet admin access.
 2. Secure admin login (single user) via Supabase Auth.
-3. Inventory: create, list, and edit items with cost, sale price, and quantity.
-4. Immediate sales: select items, automatically deduct stock, record payment method and date.
-5. Clients and fiado: searchable client records and purchase history; credit sale with stock deduction, selected client, agreed date, frequency, and installment count; collection with overdue status and a mark-installment-paid button.
+3. Inventory: create, search, list, and edit items with cost, sale price, and quantity.
+4. Immediate sales: select items, automatically deduct stock, record payment method and date, and search history by client or product.
+5. Clients and fiado: searchable client records and purchase history; credit sale with stock deduction, selected client, agreed date, frequency, and installment count; searchable collection with overdue status and a mark-installment-paid button.
 6. Dashboard with overdue, due soon, and low stock.
 7. Financial summary with profit, total sold, received, and to receive.
 8. HTTPS, JWT verification, restricted CORS, separated secrets, and RLS enabled.
@@ -497,7 +501,7 @@ Deliberately deferred:
 5. **Alerts and notifications** for low stock and due installments (email/WhatsApp).
 6. **WhatsApp collection reminders** and a per-client "send WhatsApp" link.
 7. **Archive items and clients** (soft delete) preserving history.
-8. **Search and pagination** in inventory, sales, and fiado as volume grows.
+8. **Pagination** in inventory, sales, and fiado as volume grows.
 9. **Reports and charts** (sales per period, best-selling items) — out of the MVP for simplicity.
 10. **Multi-user / multi-store** and a **mobile app / PWA**.
 
