@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
+
 import { api, ApiError } from "@/lib/api";
 // Money parsing and formatting moved to lib/format.ts once the vendas page
 // needed the same rules — two copies of money handling would eventually drift.
-import { formatMoney, parseMoneyInput, parseQuantityInput } from "@/lib/format";
+import { parseMoneyInput, parseQuantityInput } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
 /** Prefer the API's own message when we have one; otherwise say something useful. */
@@ -19,13 +21,6 @@ const inputClassName =
 const labelClassName = "block text-sm text-zinc-500";
 
 export default function EstoquePage() {
-  // --- The list -----------------------------------------------------------
-  const [products, setProducts] = useState<Product[]>([]);
-  // Starts true: the first fetch is already on its way when the page paints,
-  // so the user never sees an "empty stock" flash that isn't true.
-  const [isLoading, setIsLoading] = useState(true);
-  const [listError, setListError] = useState("");
-
   // --- The "add product" form --------------------------------------------
   // Controlled inputs, all stored as strings — that is what an <input> holds.
   // Parsing happens once, on submit.
@@ -34,50 +29,14 @@ export default function EstoquePage() {
   const [salePrice, setSalePrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
   const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-
-  // Which row is currently being deleted, so only that button shows "Excluindo…".
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // `useCallback` keeps this function identity stable across renders, which
-  // matters because the effect below lists it as a dependency: without it, a
-  // new function every render would re-run the effect every render.
-  //
-  // Every setState here happens *after* the await, never synchronously. That
-  // is what makes it safe to call straight from an effect: a synchronous
-  // setState in an effect body triggers a second render pass before the
-  // browser paints (React's `set-state-in-effect` rule flags exactly this).
-  // Callers that want the spinner back flip `isLoading` themselves, from an
-  // event handler, where synchronous updates are the normal thing to do.
-  const loadProducts = useCallback(async () => {
-    try {
-      const data = await api.get<Product[]>("/api/products");
-      setProducts(data);
-      setListError("");
-    } catch (error) {
-      setListError(messageFrom(error, "Não foi possível carregar o estoque."));
-    } finally {
-      // `finally` runs on both paths, so the spinner can never get stuck on.
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Runs once after the first render. An effect (not a call in the render
-  // body) because fetching is a side effect: rendering must stay pure.
-  useEffect(() => {
-    // The effect callback itself may not be `async` — React reads its return
-    // value as a cleanup function, and an async function returns a promise.
-    // Wrapping the work in an immediately-invoked async function is the usual
-    // way around that.
-    (async () => {
-      await loadProducts();
-    })();
-  }, [loadProducts]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     // Stop the browser's native submit, which would reload the whole page.
     event.preventDefault();
     setFormError("");
+    setFormSuccess("");
 
     const trimmedName = name.trim();
     const cost = parseMoneyInput(costPrice);
@@ -119,11 +78,7 @@ export default function EstoquePage() {
       setCostPrice("");
       setSalePrice("");
       setStockQuantity("");
-
-      // Re-fetch instead of pushing the created product into local state: the
-      // list is sorted by name in SQL, and the server is the one that knows
-      // where the new item belongs. One extra request buys correctness.
-      await loadProducts();
+      setFormSuccess("Produto adicionado com sucesso.");
     } catch (error) {
       setFormError(messageFrom(error, "Não foi possível salvar o produto."));
     } finally {
@@ -131,28 +86,37 @@ export default function EstoquePage() {
     }
   }
 
-  async function handleDelete(product: Product) {
-    const confirmed = window.confirm(
-      `Excluir "${product.name}" do estoque?\n\nEsta ação não pode ser desfeita.`,
-    );
-    if (!confirmed) return;
-
-    setDeletingId(product.id);
-    setListError("");
-
-    try {
-      await api.delete(`/api/products/${product.id}`);
-      await loadProducts();
-    } catch (error) {
-      setListError(messageFrom(error, "Não foi possível excluir o produto."));
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Estoque</h1>
+      <header className="flex flex-col gap-4 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Estoque</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Cadastre uma nova peça no estoque.
+          </p>
+        </div>
+
+        <Link
+          href="/estoque/produtos"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--internal-line)] bg-[var(--internal-paper-soft)] px-5 text-sm font-semibold text-[var(--internal-ink)] transition-colors hover:border-[var(--internal-olive)] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--internal-olive)] min-[480px]:w-auto"
+        >
+          Produtos
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            className="h-4 w-4"
+          >
+            <path
+              d="M4 10h12m-4-4 4 4-4 4"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Link>
+      </header>
 
       {/* --- Add a product ------------------------------------------------ */}
       <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4 sm:mt-8">
@@ -231,71 +195,17 @@ export default function EstoquePage() {
           {isSaving ? "Salvando…" : "Adicionar produto"}
         </button>
 
-        {formError && <p className="text-sm text-red-600">{formError}</p>}
-      </form>
-
-      {/* --- The list ----------------------------------------------------- */}
-      <div className="mt-10 sm:mt-12">
-        {isLoading && <p className="text-sm text-zinc-500">Carregando…</p>}
-
-        {!isLoading && listError && (
-          <div>
-            <p className="text-sm text-red-600">{listError}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setIsLoading(true);
-                void loadProducts();
-              }}
-              className="mt-3 text-sm text-zinc-500 underline underline-offset-4"
-            >
-              Tentar novamente
-            </button>
-          </div>
-        )}
-
-        {!isLoading && !listError && products.length === 0 && (
-          <p className="text-sm text-zinc-500">
-            Nenhum produto cadastrado ainda.
+        {formError && (
+          <p role="alert" className="text-sm text-red-600">
+            {formError}
           </p>
         )}
-
-        {!isLoading && !listError && products.length > 0 && (
-          <ul className="flex flex-col gap-3">
-            {products.map((product) => (
-              // `key` must be a stable id, never the array index: React uses it
-              // to match rows across re-renders, and indexes shift on delete.
-              <li
-                key={product.id}
-                className="flex flex-col items-stretch gap-3 rounded-lg border border-zinc-200 px-4 py-4 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between min-[480px]:gap-4"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{product.name}</p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Custo {formatMoney(product.cost_price)} · Venda{" "}
-                    {formatMoney(product.sale_price)}
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    {product.stock_quantity}{" "}
-                    {product.stock_quantity === 1 ? "unidade" : "unidades"} ·{" "}
-                    {product.sold_quantity}{" "}
-                    {product.sold_quantity === 1 ? "vendido" : "vendidos"}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(product)}
-                  disabled={deletingId === product.id}
-                  className="w-full shrink-0 rounded-lg px-4 py-3 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 min-[480px]:w-auto"
-                >
-                  {deletingId === product.id ? "Excluindo…" : "Excluir"}
-                </button>
-              </li>
-            ))}
-          </ul>
+        {formSuccess && (
+          <p role="status" className="text-sm text-emerald-700">
+            {formSuccess}
+          </p>
         )}
-      </div>
+      </form>
     </main>
   );
 }

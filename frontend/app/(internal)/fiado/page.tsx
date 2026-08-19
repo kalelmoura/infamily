@@ -9,10 +9,12 @@ import {
   formatSaleDate,
   parseMoneyToCents,
 } from "@/lib/format";
+import { normalizeSearchValue } from "@/lib/search";
 import type {
   Fiado,
   FiadoDetail,
   FiadoFrequency,
+  FiadoListEntry,
   FiadoStatus,
 } from "@/lib/types";
 
@@ -76,7 +78,8 @@ function FiadoPageContent() {
   const querySelectedId = searchParams.get("id");
 
   // --- The list -----------------------------------------------------------
-  const [fiados, setFiados] = useState<Fiado[]>([]);
+  const [fiados, setFiados] = useState<FiadoListEntry[]>([]);
+  const [query, setQuery] = useState("");
   // Starts true: the first fetch is already on its way when the page paints, so
   // she never sees a "ninguém deve nada" flash that isn't true.
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +101,7 @@ function FiadoPageContent() {
   // page for why that matters inside an effect.
   const loadFiados = useCallback(async () => {
     try {
-      const data = await api.get<Fiado[]>("/api/fiado");
+      const data = await api.get<FiadoListEntry[]>("/api/fiado");
       setFiados(data);
       setListError("");
     } catch (error) {
@@ -196,25 +199,91 @@ function FiadoPageContent() {
     }
   }
 
+  const normalizedQuery = normalizeSearchValue(query);
+  const visibleFiados = normalizedQuery
+    ? fiados.filter((fiado) =>
+        [fiado.client_name, ...fiado.product_names].some((name) =>
+          normalizeSearchValue(name).includes(normalizedQuery),
+        ),
+      )
+    : fiados;
+
+  const resultLabel = `${visibleFiados.length} ${
+    visibleFiados.length === 1 ? "fiado" : "fiados"
+  }`;
+
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Fiado</h1>
 
       {selectedId === null ? (
         /* --- The list (collection screen) ------------------------------- */
-        <div className="mt-8">
-          {isLoading && <p className="text-sm text-zinc-500">Carregando…</p>}
+        <div className="mt-7 sm:mt-8">
+          <div role="search">
+            <label htmlFor="fiadoSearch" className="block text-sm text-zinc-500">
+              Buscar por cliente ou produto
+            </label>
+            <div className="relative mt-1">
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-zinc-400"
+              >
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="5.5"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                />
+                <path
+                  d="m12.5 12.5 4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <input
+                id="fiadoSearch"
+                type="search"
+                autoComplete="off"
+                placeholder="Digite o nome do cliente ou produto"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-transparent py-3 pr-4 pl-12 text-base outline-none transition-colors placeholder:text-zinc-400 focus:border-[var(--internal-olive)]"
+              />
+            </div>
+          </div>
+
+          <div className="mt-7">
+            <div className="mb-3 flex min-h-6 items-center justify-between gap-4">
+              <h2 className="text-sm font-semibold">Contas no fiado</h2>
+              {!isLoading && !listError && (
+                <p aria-live="polite" className="text-sm text-zinc-500">
+                  {resultLabel}
+                </p>
+              )}
+            </div>
+
+          {isLoading && (
+            <p className="text-sm text-zinc-500" aria-live="polite">
+              Carregando…
+            </p>
+          )}
 
           {!isLoading && listError && (
-            <div>
-              <p className="text-sm text-red-600">{listError}</p>
+            <div className="rounded-lg border border-red-200 bg-red-50/60 px-4 py-4">
+              <p role="alert" className="text-sm text-red-700">
+                {listError}
+              </p>
               <button
                 type="button"
                 onClick={() => {
                   setIsLoading(true);
                   void loadFiados();
                 }}
-                className="mt-3 text-sm text-zinc-500 underline underline-offset-4"
+                className="mt-3 min-h-11 rounded-lg px-3 text-sm font-medium text-red-700 underline underline-offset-4 transition-colors hover:bg-red-100"
               >
                 Tentar novamente
               </button>
@@ -222,17 +291,37 @@ function FiadoPageContent() {
           )}
 
           {!isLoading && !listError && fiados.length === 0 && (
-            <p className="text-sm text-zinc-500">
-              Nenhuma venda no fiado registrada ainda.
-            </p>
+            <div className="rounded-lg border border-[var(--internal-line)] bg-[var(--internal-paper-soft)] px-4 py-6 text-center">
+              <p className="text-sm text-zinc-500">
+                Nenhuma venda no fiado registrada ainda.
+              </p>
+            </div>
           )}
 
-          {!isLoading && !listError && fiados.length > 0 && (
+          {!isLoading &&
+            !listError &&
+            fiados.length > 0 &&
+            visibleFiados.length === 0 && (
+              <div className="rounded-lg border border-[var(--internal-line)] bg-[var(--internal-paper-soft)] px-4 py-6 text-center">
+                <p className="text-sm text-zinc-500">
+                  Nenhum fiado encontrado para “{query.trim()}”.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="mt-3 min-h-11 rounded-lg px-3 text-sm font-medium text-[var(--internal-olive-dark)] underline underline-offset-4 transition-colors hover:bg-white"
+                >
+                  Limpar busca
+                </button>
+              </div>
+            )}
+
+          {!isLoading && !listError && visibleFiados.length > 0 && (
             <ul className="flex flex-col gap-3">
               {/* Already ordered by the API: em atraso first, then a vencer, em
                   dia, and quitado last. The order is derived from today's date,
                   so it belongs on the server with the status itself. */}
-              {fiados.map((fiado) => (
+              {visibleFiados.map((fiado) => (
                 <li key={fiado.id}>
                   {/* A button, not a div with onClick: it is focusable, works
                       with the keyboard and is announced as clickable. */}
@@ -263,6 +352,7 @@ function FiadoPageContent() {
               ))}
             </ul>
           )}
+          </div>
         </div>
       ) : (
         /* --- The detail -------------------------------------------------- */

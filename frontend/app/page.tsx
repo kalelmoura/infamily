@@ -11,7 +11,7 @@ const editorialFont = Newsreader({
   display: "swap",
 });
 
-const fallbackWhatsappNumber = "55910781697";
+const fallbackWhatsappNumber = "5511910781697";
 const whatsappNumber = (
   process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? fallbackWhatsappNumber
 ).replace(/\D/g, "");

@@ -1,17 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+
 import { api, ApiError } from "@/lib/api";
 import {
   centsToApiString,
   formatCents,
   formatMoney,
-  formatSaleDate,
   parseMoneyToCents,
   parseQuantityInput,
   toInputDecimal,
   todayInSaoPaulo,
 } from "@/lib/format";
+import { PAYMENT_METHOD_OPTIONS } from "@/lib/sales";
 import type {
   Client,
   FiadoFrequency,
@@ -36,20 +38,6 @@ type SaleLine = {
   quantity: string;
   unitPrice: string;
 };
-
-// The domain codes the backend accepts, paired with the pt-BR text Yasmin sees.
-// Kept in one object so a label and its code can never drift apart.
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  dinheiro: "Dinheiro",
-  pix: "Pix",
-  cartao: "Cartão",
-  fiado: "Fiado",
-};
-
-const PAYMENT_METHOD_OPTIONS = Object.entries(PAYMENT_METHOD_LABELS) as [
-  PaymentMethod,
-  string,
-][];
 
 // Same idea for the fiado frequency codes the backend accepts.
 const FREQUENCY_LABELS: Record<FiadoFrequency, string> = {
@@ -81,10 +69,6 @@ export default function VendasPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [clientsError, setClientsError] = useState("");
-
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [isLoadingSales, setIsLoadingSales] = useState(true);
-  const [salesError, setSalesError] = useState("");
 
   // --- The sale being composed -------------------------------------------
   const [lines, setLines] = useState<SaleLine[]>([]);
@@ -135,18 +119,6 @@ export default function VendasPage() {
     }
   }, []);
 
-  const loadSales = useCallback(async () => {
-    try {
-      const data = await api.get<Sale[]>("/api/sales");
-      setSales(data);
-      setSalesError("");
-    } catch (error) {
-      setSalesError(messageFrom(error, "Não foi possível carregar as vendas."));
-    } finally {
-      setIsLoadingSales(false);
-    }
-  }, []);
-
   const loadClients = useCallback(async () => {
     try {
       const data = await api.get<Client[]>("/api/clients");
@@ -170,9 +142,9 @@ export default function VendasPage() {
     // cleanup function), so the work goes in an immediately-invoked one.
     // `Promise.all` fires both requests at once rather than one after the other.
     (async () => {
-      await Promise.all([loadProducts(), loadSales(), loadClients()]);
+      await Promise.all([loadProducts(), loadClients()]);
     })();
-  }, [loadClients, loadProducts, loadSales]);
+  }, [loadClients, loadProducts]);
 
   const productsById = new Map(products.map((product) => [product.id, product]));
   const clientsById = new Map(clients.map((client) => [client.id, client]));
@@ -422,10 +394,10 @@ export default function VendasPage() {
       setFiadoInstallments("1");
       setFiadoAgreedDate("");
 
-      // Both lists are now stale: the sale is new, and every product it touched
-      // has less stock. Refetching both keeps the picker honest about what is
-      // still available.
-      await Promise.all([loadProducts(), loadSales()]);
+      // Every product touched by the sale now has less stock. Refreshing the
+      // picker keeps it honest about what is still available; sales history is
+      // loaded only on its dedicated page.
+      await loadProducts();
     } catch (error) {
       // This is where the backend's 400 surfaces — including the insufficient
       // stock message, which already names the product and both quantities in
@@ -473,7 +445,35 @@ export default function VendasPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-7 sm:px-6 sm:py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Vendas</h1>
+      <header className="flex flex-col gap-4 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Vendas</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Registre uma nova venda.
+          </p>
+        </div>
+
+        <Link
+          href="/vendas/recentes"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--internal-line)] bg-[var(--internal-paper-soft)] px-5 text-sm font-semibold text-[var(--internal-ink)] transition-colors hover:border-[var(--internal-olive)] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--internal-olive)] min-[520px]:w-auto"
+        >
+          Vendas recentes
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            className="h-4 w-4"
+          >
+            <path
+              d="M4 10h12m-4-4 4 4-4 4"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Link>
+      </header>
 
       {/* --- Record a sale ------------------------------------------------ */}
       <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4 sm:mt-8">
@@ -926,69 +926,6 @@ export default function VendasPage() {
         )}
       </form>
 
-      {/* --- Recent sales -------------------------------------------------- */}
-      <div className="mt-12">
-        <h2 className="text-lg font-semibold tracking-tight">Vendas recentes</h2>
-
-        <div className="mt-4">
-          {isLoadingSales && <p className="text-sm text-zinc-500">Carregando…</p>}
-
-          {!isLoadingSales && salesError && (
-            <div>
-              <p className="text-sm text-red-600">{salesError}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLoadingSales(true);
-                  void loadSales();
-                }}
-                className="mt-3 text-sm text-zinc-500 underline underline-offset-4"
-              >
-                Tentar novamente
-              </button>
-            </div>
-          )}
-
-          {!isLoadingSales && !salesError && sales.length === 0 && (
-            <p className="text-sm text-zinc-500">
-              Nenhuma venda registrada ainda.
-            </p>
-          )}
-
-          {!isLoadingSales && !salesError && sales.length > 0 && (
-            <ul className="flex flex-col gap-3">
-              {sales.map((sale) => (
-                <li
-                  key={sale.id}
-                  className="rounded-lg border border-zinc-200 px-4 py-4"
-                >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="font-medium">
-                      {formatSaleDate(sale.sale_date)}
-                    </p>
-                    <p className="font-medium">
-                      {formatMoney(sale.total_amount)}
-                    </p>
-                  </div>
-
-                  <p className="mt-1 text-sm text-zinc-500">
-                    {sale.client_name} · {PAYMENT_METHOD_LABELS[sale.payment_method]}
-                  </p>
-
-                  <ul className="mt-2 text-sm text-zinc-500">
-                    {sale.items.map((item) => (
-                      <li key={item.id}>
-                        {item.quantity} × {item.product_name} —{" "}
-                        {formatMoney(item.unit_sale_price)}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
     </main>
   );
 }

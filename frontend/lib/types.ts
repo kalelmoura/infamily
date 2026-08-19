@@ -75,7 +75,7 @@ export type FiadoFrequency = "weekly" | "biweekly" | "monthly";
  */
 export type FiadoStatus = "overdue" | "due_soon" | "current" | "paid_off";
 
-/** One row of `GET /api/fiado` — the backend's `FiadoRead`. */
+/** The shared fiado summary — the backend's `FiadoRead`. */
 export type Fiado = {
   id: string;
   sale_id: string;
@@ -90,6 +90,11 @@ export type Fiado = {
   status: FiadoStatus;
   created_at: string;
   updated_at: string;
+};
+
+/** One `GET /api/fiado` row — the backend's `FiadoListRead`. */
+export type FiadoListEntry = Fiado & {
+  product_names: string[];
 };
 
 /** One line of the sale behind a fiado — the backend's `FiadoDetailItemRead`. */
