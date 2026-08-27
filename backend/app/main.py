@@ -15,7 +15,12 @@ from app.config import settings
 from app.routers import clients, dashboard, fiado, products, sales, summary
 
 # title (inf.amily API) = the instance is my app and the API menas the backend
-app = FastAPI(title="inf.amily API") 
+app = FastAPI(
+    title="inf.amily API",
+    docs_url=None if settings.environment == "production" else "/docs",
+    redoc_url=None if settings.environment == "production" else "/redoc",
+    openapi_url=None if settings.environment == "production" else "/openapi.json",
+)
 # app = object
 # FastAPI = a class (blueprint for building an app)
 # (..) constructori call, iniciating and instance from the blueprint

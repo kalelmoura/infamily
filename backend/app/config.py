@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     # without breaking startup before those settings are declared here.
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Read from ENVIRONMENT; controls whether the API documentation is exposed.
+    environment: str = "development"
+
     # Allowed CORS origin (the frontend). Defaults to the local Next.js dev
     # server so the app runs out of the box with no .env file.
     frontend_origin: str = "http://localhost:3000"
