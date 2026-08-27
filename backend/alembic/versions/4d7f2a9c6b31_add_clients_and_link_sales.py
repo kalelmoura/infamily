@@ -24,12 +24,6 @@ WALK_IN_CLIENT_ID = "00000000-0000-0000-0000-000000000001"
 
 def upgrade() -> None:
     """Replace free-text fiado names with clients linked through sales."""
-    # Existing rows are test data. Clear the dependent tables first so the new
-    # required sales.client_id column needs neither a nullable transition nor a
-    # guessed backfill.
-    op.execute(sa.text("DELETE FROM sale_items"))
-    op.execute(sa.text("DELETE FROM fiado_accounts"))
-    op.execute(sa.text("DELETE FROM sales"))
 
     op.create_table(
         "clients",
@@ -83,7 +77,24 @@ def upgrade() -> None:
         )
     )
 
-    op.add_column("sales", sa.Column("client_id", sa.UUID(), nullable=False))
+        # Add nullable first so existing sales survive, assign them to the
+    # walk-in client, then enforce the relationship.
+    op.add_column("sales", sa.Column("client_id", sa.UUID(), nullable=True))
+    op.execute(
+        sa.text(
+            f"""
+            UPDATE sales
+            SET client_id = '{WALK_IN_CLIENT_ID}'::uuid
+            WHERE client_id IS NULL
+            """
+        )
+    )
+    op.alter_column(
+        "sales",
+        "client_id",
+        existing_type=sa.UUID(),
+        nullable=False,
+    )
     op.create_foreign_key(
         "fk_sales_client_id_clients",
         "sales",
