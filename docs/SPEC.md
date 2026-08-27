@@ -294,7 +294,7 @@ infamily/                     # (brand displayed as: infamily)
 
 ## 7. Pages
 
-The **Landing page** (`/`, public) is the brand's front door. In the MVP it contains the inf.amily identity, the tagline (UI, pt-BR) "por família – pra família", basic store info, WhatsApp actions for `+55 11 91078-1697`, and a **discreet admin access link** (to the login). It shows no internal data. It should be structured so it can later host a **product showcase** — but that showcase is **not built now** (see section 14).
+The **Landing page** (`/`, public) is the brand's front door. In the MVP it contains the inf.amily identity, the tagline (UI, pt-BR) "por família – pra família", basic store info, WhatsApp actions for <WhatsApp number — set via NEXT_PUBLIC_WHATSAPP_NUMBER>, and a **discreet admin access link** (to the login). It shows no internal data. It should be structured so it can later host a **product showcase** — but that showcase is **not built now** (see section 14).
 
 The **login screen** (`/login`, public) — admin login with email and password and a sign-in button. Reached from the discreet link on the landing. On success it redirects to the internal home.
 

@@ -11,10 +11,13 @@ const editorialFont = Newsreader({
   display: "swap",
 });
 
-const fallbackWhatsappNumber = "5511910781697";
 const whatsappNumber = (
-  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? fallbackWhatsappNumber
+  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? ""
 ).replace(/\D/g, "");
+
+if (!whatsappNumber) {
+  throw new Error("NEXT_PUBLIC_WHATSAPP_NUMBER is not set");
+}
 const whatsappMessage =
   "Olá! Vim pelo site da In family e gostaria de conhecer as peças.";
 const whatsappHref = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
