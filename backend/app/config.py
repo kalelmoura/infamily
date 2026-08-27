@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     # pydantic error) rather than fail confusingly on the first request.
     supabase_jwks_url: str
 
+    # The single Supabase Auth user allowed to access protected routes. This
+    # defaults to None so the service can still start when misconfigured, but
+    # auth fails closed: get_current_user rejects every token until this is set.
+    # Pydantic Settings reads this field from OWNER_USER_ID.
+    owner_user_id: str | None = None
+
     # Postgres connection string for SQLAlchemy's async engine. It MUST use
     # the asyncpg driver — note the `+asyncpg` in the scheme:
     #   postgresql+asyncpg://USER:PASSWORD@HOST:5432/postgres

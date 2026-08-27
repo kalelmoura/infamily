@@ -29,14 +29,22 @@ bearer_scheme = HTTPBearer(auto_error=False)
 # cache away and call Supabase on every API request.
 jwks_client = jwt.PyJWKClient(settings.supabase_jwks_url)
 
-# One reusable exception for every failure mode. Deliberately generic: the
-# response must not reveal WHICH check failed (missing header, bad signature,
-# expired, wrong audience), because that detail only helps an attacker probe.
+# One reusable exception for every authentication failure mode. Deliberately
+# generic: the response must not reveal WHICH check failed (missing header, bad
+# signature, expired, wrong issuer/audience), because that detail only helps an
+# attacker probe.
 # The WWW-Authenticate header is what RFC 6750 requires on a Bearer 401.
 _credentials_error = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Não autenticado",
     headers={"WWW-Authenticate": "Bearer"},
+)
+
+# A valid token for any user other than the configured owner is authenticated
+# but not authorized, so this is deliberately 403 rather than 401.
+_authorization_error = HTTPException(
+    status_code=status.HTTP_403_FORBIDDEN,
+    detail="Acesso negado",
 )
 
 
@@ -70,6 +78,8 @@ def get_current_user(
         #   * exp        — token has not expired (checked by default);
         #   * audience   — `aud` claim equals "authenticated", Supabase's
         #                  audience for logged-in users (anon tokens differ).
+        #   * issuer     — `iss` identifies the same Supabase Auth project as
+        #                  the configured JWKS endpoint.
         # `algorithms` is pinned to the asymmetric ones Supabase issues.
         # NEVER add HS256 here: accepting both symmetric and asymmetric
         # algorithms enables the classic algorithm-confusion attack, where a
@@ -79,14 +89,22 @@ def get_current_user(
             signing_key.key,
             algorithms=["ES256", "RS256"],
             audience="authenticated",
+            issuer=settings.supabase_jwks_url.removesuffix(
+                "/.well-known/jwks.json"
+            ),
         )
     except jwt.exceptions.PyJWKClientError:
         # Key lookup failed: unknown `kid`, or the JWKS could not be fetched.
         raise _credentials_error
     except jwt.exceptions.InvalidTokenError:
-        # Any verification failure: bad signature, expired, wrong audience,
-        # or a string that is not a JWT at all. All collapse into the same
-        # generic 401 on purpose.
+        # Any verification failure: bad signature, expired, wrong issuer or
+        # audience, or a string that is not a JWT at all. All collapse into
+        # the same generic 401 on purpose.
         raise _credentials_error
+
+    # Missing configuration, a missing subject claim, and a different user all
+    # fail closed. get() ensures a missing `sub` cannot become an unhandled 500.
+    if not settings.owner_user_id or claims.get("sub") != settings.owner_user_id:
+        raise _authorization_error
 
     return claims
