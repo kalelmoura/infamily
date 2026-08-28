@@ -1,6 +1,6 @@
 <div align="center">
 
-# inf.amily
+# In Family
 
 **A full-stack retail management system built for a real clothing business.**
 
