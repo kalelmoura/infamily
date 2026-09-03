@@ -19,3 +19,18 @@ alembic
 # date is not adding 30 days — relativedelta knows that 31 Jan + 1 month is the
 # last day of February, which naive arithmetic gets wrong every single time.
 python-dateutil
+
+# --- Phase 8: product photos ---
+# FastAPI parses multipart/form-data (what a file upload is) through this
+# package. It is not a FastAPI dependency by default, and without it an
+# endpoint declaring `UploadFile` raises at import time, not at request time.
+python-multipart
+# Decoding an upload is the only real proof it is an image — a Content-Type
+# header and a file extension are both client-supplied and both lie. Pillow
+# also fixes the phone-rotation flag and strips EXIF (GPS included) on the
+# re-encode, which matters because the photo bucket is public-read.
+Pillow
+# Async HTTP client for the Supabase Storage REST API. Deliberately not the
+# `supabase` package: it drags in gotrue, postgrest, realtime and storage3 to
+# do what is, here, exactly two HTTP calls.
+httpx

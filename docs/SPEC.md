@@ -96,6 +96,8 @@ Mandatory per the project; recommended libraries as guidance.
 
 **Database** — **Supabase PostgreSQL**, with RLS enabled as defense in depth.
 
+**File storage** — **Supabase Storage** for product photos, in a public-read bucket written only by the backend (`httpx` against the Storage REST API, `Pillow` to validate and re-encode uploads, `python-multipart` so FastAPI can parse them).
+
 **Auth keys (current Supabase model)** — Supabase now uses a **publishable key** (`sb_publishable_...`, public, used by the frontend) and a **secret key** (`sb_secret_...`, server-side only), replacing the legacy anon/service_role keys. Token verification uses **asymmetric signing keys**: the backend fetches Supabase's public keys from the **JWKS URL** to verify a token's signature — there is no shared secret to store.
 
 **Deploy** — Frontend on Vercel; backend on Render/Railway/Fly.io; database on Supabase. All with HTTPS by default.
@@ -103,7 +105,7 @@ Mandatory per the project; recommended libraries as guidance.
 **Environment variables (where each goes):**
 
 - Frontend (`.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL` (the FastAPI base URL).
-- Backend (`.env`): `DATABASE_URL` (Postgres connection string), `SUPABASE_JWKS_URL` (to verify tokens), `FRONTEND_ORIGIN` (allowed CORS origin). Optional: `SUPABASE_URL` and `SUPABASE_SECRET_KEY` if the backend ever calls the Supabase API directly (server-side only).
+- Backend (`.env`): `DATABASE_URL` (Postgres connection string), `SUPABASE_JWKS_URL` (to verify tokens), `OWNER_USER_ID` (the single account allowed in), `FRONTEND_ORIGIN` (allowed CORS origin), and — for product photos — `SUPABASE_URL`, `SUPABASE_SECRET_KEY` and `SUPABASE_PRODUCT_PHOTOS_BUCKET`. The secret key is server-side only; without it the app still starts and only photo upload fails, with a clear 503.
 
 ---
 
@@ -148,6 +150,7 @@ The fixed UUID `00000000-0000-0000-0000-000000000001` belongs to the protected "
 | `cost_price`     | NUMERIC(10,2) | NOT NULL, >= 0        | Price paid for the item (cost). |
 | `sale_price`     | NUMERIC(10,2) | NOT NULL, >= 0        | Selling price.                  |
 | `stock_quantity` | INTEGER       | NOT NULL, >= 0        | Quantity in stock.              |
+| `photo_path`     | TEXT          | nullable              | Object path inside the photo storage bucket. |
 | `created_at`     | TIMESTAMPTZ   | NOT NULL, default now | Creation.                       |
 | `updated_at`     | TIMESTAMPTZ   | NOT NULL, default now | Last update.                    |
 
@@ -300,7 +303,7 @@ The **login screen** (`/login`, public) — admin login with email and password 
 
 The **internal home** (`/painel`, protected) — the first screen after login: overdue fiados at the top (red), then fiados due soon, and a simple low/zero stock notice. No charts. `/dashboard` is retained only as a compatibility redirect to `/painel`.
 
-**Inventory** — create (`/estoque`) with name, cost, sale price, and quantity, plus a prominent "Produtos" action; searchable item list (`/estoque/produtos`) showing name, prices, and quantity (highlighting low stock); detail/edit (`/estoque/[id]`) of the same fields.
+**Inventory** — create (`/estoque`) with name, cost, sale price, quantity, and an optional photo, plus a prominent "Produtos" action; searchable item list (`/estoque/produtos`) showing a photo thumbnail, name, prices, and quantity (highlighting low stock); detail/edit (`/estoque/[id]`) of the same fields. The photo exists so the owner can recognise a piece at a glance — one per item, added or replaced from either screen by tapping the thumbnail.
 
 **Sales** — `/vendas` focuses on sale registration and links to the searchable history at `/vendas/recentes`. Select or add a client inline, choose items and quantities, watch the total update, choose payment method and date, and confirm. Immediate sales default to "Cliente avulso". Fiado uses the same flow with a required registered client plus agreed date, frequency, and installment count. The history can be searched by client or product name.
 
@@ -330,6 +333,8 @@ All data endpoints require a valid Supabase token in `Authorization: Bearer <tok
 | GET    | `/api/products/{id}` | Item detail.                                             |
 | PATCH  | `/api/products/{id}` | Edit an item (including manual stock adjustment).        |
 | DELETE | `/api/products/{id}` | Remove an item (blocked/warned if it has sales history). |
+| PUT    | `/api/products/{id}/photo` | Upload or replace the item's photo (multipart, field `file`). |
+| DELETE | `/api/products/{id}/photo` | Remove the item's photo, keeping the item.               |
 
 
 
@@ -441,6 +446,8 @@ These cover inventory, sales, and client data.
 
 **Sensitive data out of the frontend** — no client or financial data in frontend code, URL parameters, or logs. The public landing accesses no internal data.
 
+**Product photos** — stored in a Supabase Storage bucket that is **public-read**, at unguessable UUID paths. Writes go only through the authenticated backend, which holds the secret key; the bucket therefore needs no policies of its own, consistent with the deny-all RLS used on the tables. Photos are of merchandise, never of people or documents, so public read is acceptable — and it is what the deferred landing showcase will need. Every upload is decoded and re-encoded server-side, which both proves the file really is an image (the `Content-Type` header is client-supplied and can lie) and strips EXIF metadata, including the GPS coordinates phones embed.
+
 ---
 
 
@@ -466,6 +473,8 @@ Sequence prioritizing getting the inventory → sale → deduction cycle working
 **Phase 6 — Financial summary.** Endpoint and screen with profit, total sold, received, and to receive.
 
 **Phase 7 — Landing page + hardening + deploy.** Public inf.amily landing with the tagline "por família – pra família", contact/WhatsApp, and discreet admin access (the product showcase is deferred). Review CORS/secrets/RLS/HTTPS, test the full flow in production, and polish usability for the non-technical user.
+
+**Phase 8 — Product photos.** One optional photo per item, stored in Supabase Storage; upload from the create form and from the product list; thumbnails in the list. Done when: the owner attaches a photo to a piece, sees it in the list, and can replace or remove it.
 
 ---
 
@@ -494,7 +503,7 @@ All kept as simple as possible in screens and flows.
 
 Deliberately deferred:
 
-1. **Product showcase on the landing** — a public, read-only section showing available items, reusing the inventory data. Explicitly out of the MVP.
+1. **Product showcase on the landing** — a public, read-only section showing available items, reusing the inventory data (product photos already live in a public-read bucket, so they are ready for it). Explicitly out of the MVP.
 2. **Payment history** (a ledger table) — enables undoing a mistakenly recorded payment and accurate per-period financial reports (including fiado receipts, which in the MVP enter only as a total).
 3. **Sale return / cancellation** — reverse a sale and return items to stock.
 4. **Product variants** (size, color, SKU, barcode) and camera/scanner input.
@@ -525,7 +534,7 @@ A complexity brake — the development agent should actively resist the followin
 
 **Do not recompute profit from current prices.** Use the prices snapshotted at sale time, or changing a price corrupts history.
 
-**Do not create product variants, categories, or barcodes in the MVP.** An item is just name, cost, price, and quantity.
+**Do not create product variants, categories, or barcodes in the MVP.** An item is just name, cost, price, quantity, and one photo. One photo, not a gallery: the point is recognising the piece, and front/back/detail shots would mean ordering, a "main photo" concept, and a gallery UI.
 
 **Do not invent your own authentication** — use Supabase Auth.
 

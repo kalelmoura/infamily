@@ -30,6 +30,11 @@ export class ApiError extends Error {
 // inspect them here, we only hand them to JSON.stringify.
 type JsonBody = Record<string, unknown>;
 
+// A request body is either JSON (almost everything) or a `FormData` (file
+// uploads). They are serialised differently and, crucially, need different
+// Content-Type handling — see `request` below.
+type RequestBody = JsonBody | FormData;
+
 /**
  * Turn a failed response into one readable Portuguese sentence.
  *
@@ -72,7 +77,7 @@ async function readErrorMessage(response: Response): Promise<string> {
 async function request<T>(
   method: string,
   path: string,
-  body?: JsonBody,
+  body?: RequestBody,
 ): Promise<T> {
   if (!API_BASE_URL) {
     throw new ApiError(
@@ -94,7 +99,14 @@ async function request<T>(
     // The exact format app/auth.py expects: `Authorization: Bearer <token>`.
     headers.Authorization = `Bearer ${accessToken}`;
   }
-  if (body !== undefined) {
+  // Only JSON bodies get an explicit Content-Type. For a `FormData` the header
+  // is deliberately left off so the *browser* sets it — a multipart type has to
+  // carry a boundary marker (`multipart/form-data; boundary=----WebKitForm...`)
+  // that only the browser knows. Writing "multipart/form-data" by hand omits
+  // the boundary, the server cannot split the parts, and the upload fails with
+  // a confusing 422 about a missing field.
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  if (body !== undefined && !isFormData) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -103,7 +115,12 @@ async function request<T>(
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? (body as FormData)
+            : JSON.stringify(body),
     });
   } catch {
     // `fetch` only rejects when the request never completed — offline, DNS
@@ -150,7 +167,25 @@ async function request<T>(
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body: JsonBody) => request<T>("POST", path, body),
+  put: <T>(path: string, body: JsonBody) => request<T>("PUT", path, body),
   patch: <T>(path: string, body: JsonBody) => request<T>("PATCH", path, body),
+  /**
+   * Send a single file as `multipart/form-data`.
+   *
+   * The field name is `"file"` because that is what the FastAPI endpoint
+   * declares (`file: UploadFile = File(...)`) — the parameter name *is* the
+   * form field name, and a mismatch is a 422.
+   *
+   * Takes a `Blob` rather than a `File` so a compressed copy (which comes back
+   * from `canvas.toBlob` as a plain Blob) can be sent directly. The filename is
+   * passed separately since a Blob has none, and the backend needs one only to
+   * keep its multipart parser happy — the stored name is generated server-side.
+   */
+  upload: <T>(path: string, file: Blob, filename = "photo.jpg") => {
+    const form = new FormData();
+    form.append("file", file, filename);
+    return request<T>("PUT", path, form);
+  },
   // Defaults to `void` because the backend answers 204 with an empty body.
   delete: <T = void>(path: string) => request<T>("DELETE", path),
 };

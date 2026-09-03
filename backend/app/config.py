@@ -44,6 +44,27 @@ class Settings(BaseSettings):
     # frontend.
     database_url: str
 
+    # --- Supabase Storage (product photos) ---------------------------------
+    # The backend uploads product photos to a Supabase Storage bucket over the
+    # Storage REST API, which needs the project URL and the *secret* key. The
+    # secret key bypasses storage RLS — it is backend-only and must never
+    # reach the browser.
+    #
+    # Both default to None rather than being required, unlike database_url
+    # above. The reasoning is different for each: without a database nothing
+    # works at all, so failing at startup is the kindest outcome; without
+    # these, everything except photo upload still works, so taking the whole
+    # service down would be a worse trade. Instead they fail *closed* at the
+    # point of use — app/services/storage.py answers 503 while they are unset,
+    # the same pattern owner_user_id follows.
+    supabase_url: str | None = None
+    supabase_secret_key: str | None = None
+
+    # Name of the (public-read) bucket holding product photos. A setting
+    # rather than a constant so a staging environment can point at its own
+    # bucket without a code change.
+    supabase_product_photos_bucket: str = "product-photos"
+
 
 # Import this single instance wherever settings are needed:
 #   from app.config import settings

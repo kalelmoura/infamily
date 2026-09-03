@@ -21,7 +21,7 @@ The public landing page presents the clothing brand; the protected application h
 ## What I built
 
 - **Daily dashboard** — highlights overdue and upcoming payments alongside low-stock products.
-- **Inventory management** — create, update, search, and safely remove products while tracking cost, sale price, and quantity.
+- **Inventory management** — create, update, search, and safely remove products while tracking cost, sale price, quantity, and a photo of each piece.
 - **Sales workflow** — records multi-item sales, supports per-item discounts, and deducts stock automatically.
 - **Customer records** — keeps contact details, notes, purchase history, and outstanding balances together.
 - **Fiado (store credit)** — creates installment plans, calculates due dates and balances, flags overdue accounts, and records payments.
@@ -33,6 +33,7 @@ The public landing page presents the clothing brand; the protected application h
 - **Atomic, concurrency-safe sales.** Product rows are locked with `SELECT ... FOR UPDATE`; stock validation, stock deduction, price snapshots, sale items, and an optional fiado account are committed once as a single transaction. A failed sale writes nothing, and simultaneous sales cannot oversell the last unit.
 - **Accurate history.** Cost and sale prices are copied onto each sale item at checkout, so past revenue and profit never change when a product's current price changes.
 - **Secure owner-only access.** Supabase manages cookie-based sessions. The FastAPI backend independently verifies each JWT's signature, expiry, issuer, and audience against Supabase's JWKS, then enforces a user-ID allowlist. Row Level Security remains enabled on every table.
+- **Safe image uploads.** Product photos are validated by decoding them server-side rather than trusting the browser's `Content-Type`, then re-encoded to a capped-size JPEG — which also applies the phone's rotation flag and strips EXIF metadata, GPS coordinates included, before anything reaches a public bucket.
 - **Correct money and dates.** PostgreSQL `NUMERIC` and Python `Decimal` avoid floating-point errors. Installment schedules use calendar-aware month arithmetic and the store's São Paulo timezone.
 - **Clear separation of concerns.** FastAPI routers handle HTTP, Pydantic schemas validate inputs, service modules own business rules, SQLAlchemy manages async persistence, and Alembic versions the database schema.
 
@@ -44,7 +45,8 @@ Browser
         ├── Supabase Auth (cookie session)
         └── HTTPS + JWT
               └── FastAPI + SQLAlchemy
-                    └── Supabase PostgreSQL
+                    ├── Supabase PostgreSQL
+                    └── Supabase Storage (product photos)
 ```
 
 | Layer | Technology |
@@ -52,6 +54,7 @@ Browser
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS |
 | Backend | FastAPI, Pydantic, async SQLAlchemy, PyJWT |
 | Data | PostgreSQL, Alembic migrations, Row Level Security |
+| Files | Supabase Storage, Pillow image processing |
 | Auth | Supabase Auth with asymmetric JWKS verification |
 | Deployment | Vercel, Render, Supabase |
 
@@ -83,6 +86,21 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 The API runs at [http://localhost:8000](http://localhost:8000). Interactive API docs are available at `/docs` in development and disabled in production.
+
+### Product photo storage (one-time)
+
+Product photos live in a Supabase Storage bucket, which is created once from the Supabase dashboard rather than by a migration — buckets live in the `storage` schema owned by `supabase_storage_admin`, so a migration touching them would fail against a plain PostgreSQL database.
+
+Under **Storage → New bucket**:
+
+| Setting | Value |
+| --- | --- |
+| Name | `product-photos` (or whatever `SUPABASE_PRODUCT_PHOTOS_BUCKET` is set to) |
+| Public bucket | **On** — photos are served straight from the CDN at unguessable UUID paths |
+| File size limit | 10 MB |
+| Allowed MIME types | `image/jpeg`, `image/png`, `image/webp` |
+
+No bucket policies are needed: reads are public, and the only writer is the backend, using `SUPABASE_SECRET_KEY` behind an authenticated endpoint. Leave `SUPABASE_URL` and `SUPABASE_SECRET_KEY` unset and everything else still works — only photo upload returns a 503.
 
 See [`docs/SPEC.md`](docs/SPEC.md) for the complete data model, API contract, and business rules.
 
