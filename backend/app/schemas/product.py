@@ -115,5 +115,19 @@ class ProductRead(BaseModel):
     sale_price: Decimal
     stock_quantity: int
     sold_quantity: int = 0
+    # The photo's public URL, or None for a product without one.
+    #
+    # Note what is *not* here: `photo_path`, the column the database actually
+    # holds. The path is an internal storage detail — the frontend has no use
+    # for it and no business knowing the bucket's layout. The router turns one
+    # into the other (see `_to_read`), which is also why this field has a
+    # default: `model_validate(product)` cannot find a `photo_url` attribute on
+    # the ORM object, so it is filled in afterwards.
+    #
+    # It is absent from ProductCreate and ProductUpdate for a stronger reason:
+    # those declare `extra="forbid"`, so a client trying to point a product at
+    # an arbitrary URL gets a 422. Photos change only through the dedicated
+    # upload endpoint, which controls what actually gets stored.
+    photo_url: str | None = None
     created_at: datetime
     updated_at: datetime

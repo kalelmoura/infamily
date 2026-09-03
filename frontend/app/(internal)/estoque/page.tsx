@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { ProductPhotoInput } from "@/components/product-photo-input";
 import { api, ApiError } from "@/lib/api";
 // Money parsing and formatting moved to lib/format.ts once the vendas page
 // needed the same rules — two copies of money handling would eventually drift.
 import { parseMoneyInput, parseQuantityInput } from "@/lib/format";
+import { compressImage } from "@/lib/image";
 import type { Product } from "@/lib/types";
 
 /** Prefer the API's own message when we have one; otherwise say something useful. */
@@ -28,6 +30,10 @@ export default function EstoquePage() {
   const [costPrice, setCostPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
+  // The photo cannot be uploaded with the rest of the form: the upload endpoint
+  // addresses a product by id, and the product does not exist yet. So the file
+  // waits here and is sent right after the product is created.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -65,7 +71,7 @@ export default function EstoquePage() {
 
     setIsSaving(true);
     try {
-      await api.post<Product>("/api/products", {
+      const product = await api.post<Product>("/api/products", {
         // Keys are snake_case to match the backend schema exactly — an unknown
         // key would be rejected outright (`extra="forbid"`).
         name: trimmedName,
@@ -74,11 +80,31 @@ export default function EstoquePage() {
         stock_quantity: quantity,
       });
 
+      // The photo is a second, separate request, so it can fail on its own —
+      // and by then the product already exists. Reporting that as "could not
+      // save the product" would be a lie that makes her enter everything
+      // again, creating a duplicate. So the failure is reported for what it
+      // is, and it does not undo the successful part.
+      let photoFailed = false;
+      if (photoFile) {
+        try {
+          const compressed = await compressImage(photoFile);
+          await api.upload(`/api/products/${product.id}/photo`, compressed);
+        } catch {
+          photoFailed = true;
+        }
+      }
+
       setName("");
       setCostPrice("");
       setSalePrice("");
       setStockQuantity("");
-      setFormSuccess("Produto adicionado com sucesso.");
+      setPhotoFile(null);
+      setFormSuccess(
+        photoFailed
+          ? "Produto adicionado, mas não foi possível enviar a foto. Você pode adicioná-la na lista de produtos."
+          : "Produto adicionado com sucesso.",
+      );
     } catch (error) {
       setFormError(messageFrom(error, "Não foi possível salvar o produto."));
     } finally {
@@ -183,6 +209,18 @@ export default function EstoquePage() {
             value={stockQuantity}
             onChange={(event) => setStockQuantity(event.target.value)}
           />
+        </div>
+
+        <div>
+          <span className={labelClassName}>Foto (opcional)</span>
+          <div className="mt-2">
+            <ProductPhotoInput
+              selectedFile={photoFile}
+              onSelect={setPhotoFile}
+              onRemove={() => setPhotoFile(null)}
+              isBusy={isSaving}
+            />
+          </div>
         </div>
 
         <button

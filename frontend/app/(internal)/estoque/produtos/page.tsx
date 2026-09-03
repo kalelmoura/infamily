@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api, ApiError } from "@/lib/api";
 import { formatMoney } from "@/lib/format";
+import { compressImage } from "@/lib/image";
 import { normalizeSearchValue } from "@/lib/search";
 import type { Product } from "@/lib/types";
 
@@ -19,6 +20,17 @@ export default function ProdutosPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Which product's photo is being uploaded or removed right now — the same
+  // shape as `deletingId` above, so a row can show its own busy state without
+  // freezing the whole list.
+  const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+
+  // One hidden file input shared by every row, rather than one per product: a
+  // list of eighty pieces would otherwise mount eighty file inputs. The row
+  // that opened the picker is remembered here so the change handler knows
+  // which product the chosen file belongs to.
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingProductId = useRef<string | null>(null);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -56,6 +68,57 @@ export default function ProdutosPage() {
       setListError(messageFrom(error, "Não foi possível excluir o produto."));
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  function openPhotoPicker(productId: string) {
+    pendingProductId.current = productId;
+    fileInputRef.current?.click();
+  }
+
+  async function handlePhotoSelected(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0];
+    const productId = pendingProductId.current;
+    // Reset immediately so picking the same file twice in a row still fires a
+    // change event the second time.
+    event.target.value = "";
+    if (!file || !productId) return;
+
+    setPhotoBusyId(productId);
+    setListError("");
+
+    try {
+      const compressed = await compressImage(file);
+      await api.upload(`/api/products/${productId}/photo`, compressed);
+      // Reload rather than patching the row in place: the response carries a
+      // brand-new photo URL (the path changes on every upload so caches cannot
+      // serve the old picture), and re-reading keeps the list the single
+      // source of truth.
+      await loadProducts();
+    } catch (error) {
+      setListError(messageFrom(error, "Não foi possível enviar a foto."));
+    } finally {
+      setPhotoBusyId(null);
+      pendingProductId.current = null;
+    }
+  }
+
+  async function handleRemovePhoto(product: Product) {
+    const confirmed = window.confirm(`Remover a foto de "${product.name}"?`);
+    if (!confirmed) return;
+
+    setPhotoBusyId(product.id);
+    setListError("");
+
+    try {
+      await api.delete(`/api/products/${product.id}/photo`);
+      await loadProducts();
+    } catch (error) {
+      setListError(messageFrom(error, "Não foi possível remover a foto."));
+    } finally {
+      setPhotoBusyId(null);
     }
   }
 
@@ -196,18 +259,82 @@ export default function ProdutosPage() {
                 key={product.id}
                 className="flex flex-col items-stretch gap-3 rounded-lg border border-zinc-200 px-4 py-4 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between min-[480px]:gap-4"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{product.name}</p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Custo {formatMoney(product.cost_price)} · Venda{" "}
-                    {formatMoney(product.sale_price)}
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    {product.stock_quantity}{" "}
-                    {product.stock_quantity === 1 ? "unidade" : "unidades"} ·{" "}
-                    {product.sold_quantity}{" "}
-                    {product.sold_quantity === 1 ? "vendido" : "vendidos"}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  {/* The thumbnail is a button: tapping it is how a photo gets
+                      added or replaced. That keeps the row from growing an
+                      extra control for something the picture itself already
+                      represents. */}
+                  <button
+                    type="button"
+                    onClick={() => openPhotoPicker(product.id)}
+                    disabled={photoBusyId === product.id}
+                    aria-label={
+                      product.photo_url
+                        ? `Trocar a foto de ${product.name}`
+                        : `Adicionar foto a ${product.name}`
+                    }
+                    className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[var(--internal-line)] bg-[var(--internal-paper-soft)] transition-colors hover:border-[var(--internal-olive)] disabled:opacity-50"
+                  >
+                    {product.photo_url ? (
+                      // Plain <img> rather than next/image: these are already
+                      // capped at 1600px and served from Supabase's CDN, so the
+                      // optimizer would only add a build-time dependency on the
+                      // Supabase hostname for no real gain. `loading="lazy"`
+                      // means a long list only fetches what is on screen.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={product.photo_url}
+                        alt={`Foto de ${product.name}`}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-zinc-400">
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          className="h-6 w-6"
+                        >
+                          <path
+                            d="M12 8v8m-4-4h8"
+                            stroke="currentColor"
+                            strokeWidth="1.7"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </span>
+                    )}
+
+                    {photoBusyId === product.id && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-white/75 text-[11px] font-medium text-zinc-600">
+                        Enviando…
+                      </span>
+                    )}
+                  </button>
+
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{product.name}</p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Custo {formatMoney(product.cost_price)} · Venda{" "}
+                      {formatMoney(product.sale_price)}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      {product.stock_quantity}{" "}
+                      {product.stock_quantity === 1 ? "unidade" : "unidades"} ·{" "}
+                      {product.sold_quantity}{" "}
+                      {product.sold_quantity === 1 ? "vendido" : "vendidos"}
+                    </p>
+                    {product.photo_url && (
+                      <button
+                        type="button"
+                        onClick={() => void handleRemovePhoto(product)}
+                        disabled={photoBusyId === product.id}
+                        className="mt-1 min-h-11 text-sm text-zinc-500 underline underline-offset-4 transition-colors hover:text-red-600 disabled:opacity-50"
+                      >
+                        Remover foto
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <button
@@ -223,6 +350,17 @@ export default function ProdutosPage() {
           </ul>
         )}
       </section>
+
+      {/* One input for the whole list — `openPhotoPicker` records which row
+          asked for it before clicking it. Hidden, because a bare file input
+          cannot be styled to match anything around it. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => void handlePhotoSelected(event)}
+      />
     </main>
   );
 }

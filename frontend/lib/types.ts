@@ -15,6 +15,11 @@ export type Product = {
   sale_price: string;
   stock_quantity: number;
   sold_quantity: number;
+  // Public URL of the product's photo, or null when it has none. The backend
+  // composes it from the object's path inside the storage bucket, so the
+  // frontend never needs to know the bucket's name or layout — it just renders
+  // whatever URL it is given.
+  photo_url: string | null;
   created_at: string;
   updated_at: string;
 };

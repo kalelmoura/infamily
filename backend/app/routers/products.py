@@ -1,11 +1,17 @@
 """Products endpoints — CRUD over the store's inventory (`/api/products`).
 
 This is the Estoque module's backend: list, create, read, edit and delete
-items. Straight CRUD, so the logic lives right here in the router — no
-services layer. That comes later, for the sale transaction, where real
-business rules (validate stock, deduct, snapshot prices, maybe create a
-fiado) deserve a home of their own. Adding a service layer that only forwards
-calls would be indirection without a payoff.
+items, plus the item's photo. The CRUD half is straight CRUD, so its logic
+lives right here in the router — a service layer that only forwarded calls
+would be indirection without a payoff.
+
+The photo half is the exception, and it is worth seeing why. Uploading means
+validating and re-encoding an image, then talking to an external service over
+HTTP — neither of which is "handling a request", and both of which are worth
+testing without a web server in the way. So they live in `app/services/`:
+`images.py` (bytes in, bytes out) and `storage.py` (the Supabase calls). What
+stays here is the part that genuinely is the endpoint's job: the order the
+steps run in, and which failure maps to which status code.
 
 Two conventions this file follows everywhere:
 
@@ -17,9 +23,9 @@ Two conventions this file follows everywhere:
     schema, not by whatever the model happens to hold.
 """
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +35,19 @@ from app.database import get_db
 from app.models.product import Product
 from app.models.sale import SaleItem
 from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
+from app.services.images import normalize_product_photo
+from app.services.storage import build_public_url, delete_photo, upload_photo
+
+# Refuse anything larger before spending CPU decoding it. `UploadFile` spools
+# to a temp file past 1 MB, so this is not about running out of memory — it is
+# about not decoding a 200 MB file someone sent to see what happens. Ten MB is
+# comfortably above any phone photo.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+# The formats a browser will hand over from a phone's camera or gallery. This
+# check is only the cheap first pass — the header is client-supplied and can
+# lie, so the real proof is Pillow decoding the bytes further down.
+ALLOWED_PHOTO_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 router = APIRouter(
     # The full path of every route below = this prefix + the route's own path.
@@ -77,6 +96,32 @@ async def _get_product_or_404(db: AsyncSession, product_id: UUID) -> Product:
     return product
 
 
+def _to_read(product: Product, sold_quantity: int = 0) -> ProductRead:
+    """Build the API response for one product.
+
+    Two of `ProductRead`'s fields cannot come from the ORM object directly:
+
+      * `sold_quantity` is an aggregate over `sale_items`, computed by whichever
+        endpoint needs it (only the list does — elsewhere it stays 0);
+      * `photo_url` is derived from the internal `photo_path` plus the bucket
+        configuration, so the frontend never learns the storage layout.
+
+    `model_copy(update=...)` is how Pydantic sets fields the source object did
+    not have. Routing every endpoint through this one function is what stops
+    the two from drifting — before it existed, only the list endpoint filled in
+    `sold_quantity`, and adding `photo_url` in five places would have been five
+    chances to forget one.
+    """
+    return ProductRead.model_validate(product).model_copy(
+        update={
+            "sold_quantity": sold_quantity,
+            "photo_url": (
+                build_public_url(product.photo_path) if product.photo_path else None
+            ),
+        }
+    )
+
+
 # The return annotation (`-> list[ProductRead]`) is what FastAPI reads to build
 # the response model and the OpenAPI schema — no separate `response_model=`
 # argument needed. A bare array is returned, exactly as the frontend expects.
@@ -110,10 +155,7 @@ async def list_products(db: AsyncSession = Depends(get_db)) -> list[ProductRead]
     # No commit: this is a read. Closing the session (done by `get_db`) rolls
     # back the read-only transaction, which is free.
     return [
-        ProductRead.model_validate(product).model_copy(
-            update={"sold_quantity": int(sold_quantity)}
-        )
-        for product, sold_quantity in rows
+        _to_read(product, int(sold_quantity)) for product, sold_quantity in rows
     ]
 
 
@@ -148,7 +190,7 @@ async def create_product(
     #   * `expire_on_commit=False` (see database.py) means commit does not
     #     invalidate them.
     # So the object is fully readable here without a second round-trip.
-    return ProductRead.model_validate(product)
+    return _to_read(product)
 
 
 @router.get("/{product_id}")
@@ -160,7 +202,7 @@ async def get_product(
 ) -> ProductRead:
     """Fetch one product by id."""
     product = await _get_product_or_404(db, product_id)
-    return ProductRead.model_validate(product)
+    return _to_read(product)
 
 
 @router.patch("/{product_id}")
@@ -193,7 +235,7 @@ async def update_product(
     # emits no UPDATE, and the endpoint returns the product unchanged.
     await db.commit()
 
-    return ProductRead.model_validate(product)
+    return _to_read(product)
 
 
 # 204 No Content is the right answer to a successful DELETE: the resource is
@@ -219,6 +261,10 @@ async def delete_product(
     # Checking first with a `SELECT ... WHERE EXISTS` instead would be a race:
     # a sale could be recorded between the check and the delete. Letting the
     # constraint decide is both simpler and correct under concurrency.
+    # Captured before the delete: once the object is gone from the session,
+    # reading its attributes is no longer reliable.
+    photo_path = product.photo_path
+
     try:
         await db.delete(product)
         await db.commit()
@@ -237,3 +283,114 @@ async def delete_product(
                 "Para tirá-lo da loja, defina a quantidade em estoque como 0."
             ),
         ) from error
+
+    # Only once the row is really gone: the photo has nothing left pointing at
+    # it, so leaving it would be an orphan paid for forever. Deliberately after
+    # the commit, never before — if the delete had been refused above, the
+    # product still exists and still needs its photo.
+    if photo_path:
+        await delete_photo(photo_path)
+
+
+# --- Photo ------------------------------------------------------------------
+# One photo per product, stored in Supabase Storage. PUT rather than POST
+# because this replaces the single photo sub-resource: sending it twice leaves
+# the same end state, which is exactly what makes a retry safe after a flaky
+# mobile connection.
+
+
+@router.put("/{product_id}/photo")
+async def upload_product_photo(
+    product_id: UUID,
+    # `File(...)` marks this as a multipart form field rather than a JSON body,
+    # and the parameter name is the field name the frontend must send.
+    # `UploadFile` streams to a spooled temp file instead of loading the whole
+    # request into memory up front.
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+) -> ProductRead:
+    """Attach or replace a product's photo."""
+    product = await _get_product_or_404(db, product_id)
+
+    if file.content_type not in ALLOWED_PHOTO_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Envie uma imagem JPG, PNG ou WEBP.",
+        )
+
+    raw = await file.read()
+
+    if len(raw) > MAX_UPLOAD_BYTES:
+        # 413 is the status for "your body is too big" — a real HTTP answer
+        # rather than a generic 400, so a client could act on it specifically.
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="A imagem é muito grande. O limite é 10 MB.",
+        )
+
+    if not raw:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O arquivo enviado está vazio.",
+        )
+
+    try:
+        # The real validation: bytes that do not decode are not an image, no
+        # matter what the Content-Type above claimed. This also strips EXIF
+        # (GPS included — the bucket is public) and fixes phone rotation.
+        photo_bytes = normalize_product_photo(raw)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Não foi possível ler a imagem. Tente outra foto.",
+        ) from error
+
+    previous_path = product.photo_path
+    # A fresh random name on every replace, rather than a stable
+    # "{product_id}.jpg". The bucket is public and served through a CDN, so
+    # reusing the path would leave browsers and the CDN showing the *old*
+    # picture at a URL whose contents changed. A new name is a new URL, which
+    # sidesteps cache invalidation entirely.
+    photo_path = f"{product.id}/{uuid4().hex}.jpg"
+
+    # Order matters, and this is the whole reason the steps are spelled out
+    # here rather than hidden in a service: upload first, commit second, delete
+    # the old object last. If the commit fails, the worst outcome is one orphan
+    # file nothing references. Reverse the first two and a failure leaves a row
+    # pointing at a file that was never stored — a broken image, permanently.
+    await upload_photo(photo_path, photo_bytes)
+
+    product.photo_path = photo_path
+    await db.commit()
+
+    if previous_path:
+        # Best-effort by design: the user's request has already succeeded, so a
+        # failed cleanup must not turn into an error message.
+        await delete_photo(previous_path)
+
+    return _to_read(product)
+
+
+@router.delete("/{product_id}/photo", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product_photo(
+    product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Remove a product's photo, leaving the product itself untouched."""
+    product = await _get_product_or_404(db, product_id)
+
+    photo_path = product.photo_path
+    if photo_path is None:
+        # Already true. Answering 204 rather than 404 keeps the endpoint
+        # idempotent — a double tap on "Remover foto" should not produce an
+        # error for something that is in the state the user asked for.
+        return
+
+    # Clear the reference first, remove the file after. The row is the source
+    # of truth about whether a product has a photo; if the file deletion fails,
+    # an orphan in the bucket is invisible to everyone, while a row still
+    # pointing at a deleted file would render as a broken image.
+    product.photo_path = None
+    await db.commit()
+
+    await delete_photo(photo_path)

@@ -103,6 +103,19 @@ class Product(Base):
         Integer, nullable=False, server_default=text("0")
     )
 
+    # --- Photo -------------------------------------------------------------
+    # The object's path *inside* the storage bucket ("{product_id}/{uuid}.jpg"),
+    # never a full URL. Storing the URL instead would look more convenient and
+    # would rot the day the Supabase project URL or a custom domain changes —
+    # every row would then point at a host that no longer serves the file. The
+    # path is stable; the public URL is composed at read time from it plus the
+    # bucket setting (see app/services/storage.py).
+    #
+    # Nullable because a photo is optional: every product that already exists
+    # has none, and registering a piece without one has to keep working. A
+    # `Mapped[str | None]` annotation is what makes the column nullable.
+    photo_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # --- Timestamps --------------------------------------------------------
     # `DateTime(timezone=True)` maps to Postgres TIMESTAMPTZ (timestamp WITH
     # time zone). This matters: TIMESTAMPTZ stores an unambiguous instant, so
