@@ -28,7 +28,7 @@ MVP success: the owner can, unaided, (a) register an item, (b) record a sale tha
 
 The system has a public part (landing page) and an internal part protected by login with inventory, sales, clients, fiado, dashboard, and financial metrics. The internal modules connect through one central idea: **every product leaving the store is a "sale,"** whether paid immediately or on credit. Understanding this avoids duplicating logic.
 
-**Landing page (public).** Presents the inf.amily brand with the tagline (UI, pt-BR) "por família – pra família" and basic store info. In the future it will display available items (not now). It has a discreet admin access link to the internal login.
+**Landing page (public).** Presents the inf.amily brand with the tagline (UI, pt-BR) "por família pra família", basic store info, and a curated catalogue of available items. Yasmin explicitly chooses which products appear. It has a discreet admin access link to the internal login.
 
 **Inventory (UI: "Estoque").** Registers items with three essential pieces of information: the price the owner paid for the item (cost), the price she will sell it for, and the quantity in stock. It is the foundation of everything — sales and fiado consume stock, and profit comes from the difference between sale price and cost.
 
@@ -100,11 +100,11 @@ Mandatory per the project; recommended libraries as guidance.
 
 **Auth keys (current Supabase model)** — Supabase now uses a **publishable key** (`sb_publishable_...`, public, used by the frontend) and a **secret key** (`sb_secret_...`, server-side only), replacing the legacy anon/service_role keys. Token verification uses **asymmetric signing keys**: the backend fetches Supabase's public keys from the **JWKS URL** to verify a token's signature — there is no shared secret to store.
 
-**Deploy** — Frontend on Vercel; backend on Render/Railway/Fly.io; database on Supabase. All with HTTPS by default.
+**Deploy** — Frontend on Vercel; backend on Render/Railway/Fly.io; database on Supabase. All with HTTPS by default. The repository's Render blueprint configures the backend build/start commands, production mode, server-only environment placeholders, and `/ready` database-aware health check without committing deployment values. Dashboard-only and release checks are maintained in `docs/PRODUCTION_CHECKLIST.md`.
 
 **Environment variables (where each goes):**
 
-- Frontend (`.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL` (the FastAPI base URL).
+- Frontend (`.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL` (the FastAPI base URL), `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_INSTAGRAM_URL`, `STORE_ADDRESS`, and the server-only `OWNER_USER_ID` used by the route guard.
 - Backend (`.env`): `DATABASE_URL` (Postgres connection string), `SUPABASE_JWKS_URL` (to verify tokens), `OWNER_USER_ID` (the single account allowed in), `FRONTEND_ORIGIN` (allowed CORS origin), and — for product photos — `SUPABASE_URL`, `SUPABASE_SECRET_KEY` and `SUPABASE_PRODUCT_PHOTOS_BUCKET`. The secret key is server-side only; without it the app still starts and only photo upload fails, with a clear 503.
 
 ---
@@ -151,6 +151,7 @@ The fixed UUID `00000000-0000-0000-0000-000000000001` belongs to the protected "
 | `sale_price`     | NUMERIC(10,2) | NOT NULL, >= 0        | Selling price.                  |
 | `stock_quantity` | INTEGER       | NOT NULL, >= 0        | Quantity in stock.              |
 | `photo_path`     | TEXT          | nullable              | Object path inside the photo storage bucket. |
+| `show_in_catalog`| BOOLEAN       | NOT NULL, default false | Whether Yasmin selected the item for the public catalogue. |
 | `created_at`     | TIMESTAMPTZ   | NOT NULL, default now | Creation.                       |
 | `updated_at`     | TIMESTAMPTZ   | NOT NULL, default now | Last update.                    |
 
@@ -239,8 +240,8 @@ A repository with two top-level folders (frontend and backend), each with its ow
 infamily/                     # (brand displayed as: infamily)
 ├── frontend/                  # Next.js (Vercel)
 │   ├── app/
-│   │   ├── (public)/
-│   │   │   └── page.tsx               # inf.amily landing (/)
+│   │   ├── page.tsx                    # inf.amily landing (/)
+│   │   ├── catalog-section.tsx         # Public, read-only product catalogue
 │   │   ├── (internal)/                # Login-protected group
 │   │   │   ├── layout.tsx             # Session guard + navigation
 │   │   │   ├── painel/page.tsx        # Overdue + due soon + low stock
@@ -276,6 +277,7 @@ infamily/                     # (brand displayed as: infamily)
     │   ├── models/                    # clients, products, sales, sale_items, fiado
     │   ├── schemas/                   # Pydantic schemas
     │   ├── routers/
+    │   │   ├── catalog.py              # Safe public catalogue read
     │   │   ├── products.py
     │   │   ├── clients.py
     │   │   ├── sales.py
@@ -297,13 +299,13 @@ infamily/                     # (brand displayed as: infamily)
 
 ## 7. Pages
 
-The **Landing page** (`/`, public) is the brand's front door. In the MVP it contains the inf.amily identity, the tagline (UI, pt-BR) "por família – pra família", basic store info, WhatsApp actions for <WhatsApp number — set via NEXT_PUBLIC_WHATSAPP_NUMBER>, and a **discreet admin access link** (to the login). It shows no internal data. It should be structured so it can later host a **product showcase** — but that showcase is **not built now** (see section 14).
+The **Landing page** (`/`, public) is the brand's front door. It contains the inf.amily identity, the tagline (UI, pt-BR) "por família pra família", basic store info, WhatsApp actions for <WhatsApp number — set via NEXT_PUBLIC_WHATSAPP_NUMBER>, a curated **product catalogue**, and a **discreet admin access link** (to the login). The catalogue shows only products Yasmin selected that also have a photo and positive stock. Its public response contains only the product id, name, sale price, and photo URL. Catalogue cards form one continuous row that loops to the right, pauses during pointer or keyboard interaction, and becomes a static horizontal list when reduced motion is requested. When no catalogue data is available, the landing page shows three local, non-clickable garment illustrations labelled (UI, pt-BR) "Em breve"; the placeholders disappear as soon as at least one eligible product is returned. The location heading appears above the address, map action, and embedded map. The displayed address and both Google Maps URLs are derived from the server-only `STORE_ADDRESS` environment variable; deployment values must not be committed. Internal frontend routes fail closed unless the verified Supabase token subject matches the server-only `OWNER_USER_ID`, using the same owner UUID enforced by FastAPI.
 
 The **login screen** (`/login`, public) — admin login with email and password and a sign-in button. Reached from the discreet link on the landing. On success it redirects to the internal home.
 
 The **internal home** (`/painel`, protected) — the first screen after login: overdue fiados at the top (red), then fiados due soon, and a simple low/zero stock notice. No charts. `/dashboard` is retained only as a compatibility redirect to `/painel`.
 
-**Inventory** — create (`/estoque`) with name, cost, sale price, quantity, and an optional photo, plus a prominent "Produtos" action; searchable item list (`/estoque/produtos`) showing a photo thumbnail, name, prices, and quantity (highlighting low stock); detail/edit (`/estoque/[id]`) of the same fields. The photo exists so the owner can recognise a piece at a glance — one per item, added or replaced from either screen by tapping the thumbnail.
+**Inventory** — create (`/estoque`) with name, cost, sale price, quantity, an optional photo, and an "Exibir no catálogo" choice, plus a prominent "Produtos" action; searchable item list (`/estoque/produtos`) showing a photo thumbnail, name, prices, quantity, and a catalogue visibility switch. The photo exists so the owner can recognise a piece at a glance — one per item, added or replaced by tapping the thumbnail.
 
 **Sales** — `/vendas` focuses on sale registration and links to the searchable history at `/vendas/recentes`. Select or add a client inline, choose items and quantities, watch the total update, choose payment method and date, and confirm. Immediate sales default to "Cliente avulso". Fiado uses the same flow with a required registered client plus agreed date, frequency, and installment count. The history can be searched by client or product name.
 
@@ -321,7 +323,7 @@ The **internal home** (`/painel`, protected) — the first screen after login: o
 
 ## 8. Backend endpoints (FastAPI)
 
-All data endpoints require a valid Supabase token in `Authorization: Bearer <token>`. **There is no login endpoint on the backend** — login happens on the frontend against Supabase Auth.
+All data endpoints except the read-only public catalogue require a valid Supabase token in `Authorization: Bearer <token>`. **There is no login endpoint on the backend** — login happens on the frontend against Supabase Auth.
 
 ### Inventory
 
@@ -335,6 +337,12 @@ All data endpoints require a valid Supabase token in `Authorization: Bearer <tok
 | DELETE | `/api/products/{id}` | Remove an item (blocked/warned if it has sales history). |
 | PUT    | `/api/products/{id}/photo` | Upload or replace the item's photo (multipart, field `file`). |
 | DELETE | `/api/products/{id}/photo` | Remove the item's photo, keeping the item.               |
+
+### Public catalogue
+
+| Method | Route          | Description |
+| ------ | -------------- | ----------- |
+| GET    | `/api/catalog` | Public read-only list of manually selected, photographed products with stock; returns only id, name, sale price, and photo URL. |
 
 
 
@@ -438,15 +446,23 @@ These cover inventory, sales, and client data.
 
 **Strict secret separation** — the frontend only knows the Supabase URL and the publishable key. The **secret key and the database connection string live only on the backend**, in the provider's environment variables, never exposed to the browser.
 
-**CORS restricted** — the backend only accepts requests from the frontend domain.
+**CORS restricted** — the backend only accepts requests from the frontend domain, permits only the methods the application uses, and accepts only the `Authorization` and `Content-Type` request headers. The API receives its JWT in the `Authorization` header rather than a cross-origin cookie, so credentialed CORS is disabled.
+
+**Production configuration fails closed** — startup rejects an unknown environment name, a wildcard or path-bearing frontend origin, a non-HTTPS production frontend, a malformed owner UUID or JWKS URL, a missing production owner, and a database URL that does not select the asyncpg driver.
+
+**Browser security headers** — the frontend sends an enforcing Content Security Policy scoped to its own scripts and styles, Supabase connections and images, the configured FastAPI origin, and the Google Maps frame. It also denies framing, disables MIME sniffing and unused browser capabilities, limits referrer data, and enables HSTS in production.
+
+**Sensitive-response caching disabled** — protected API responses use `Cache-Control: no-store`; the intentionally public catalogue remains cacheable. Render uses `/ready` as its health-check path so a deployment is considered ready only when both FastAPI and Postgres respond.
+
+**Dependency and build checks** — direct Python dependencies and the frontend lockfile are version-pinned. Pull requests run dependency audits, linting, frontend production builds, Python compilation, and backend security-boundary tests covering production API-doc removal, authentication, cache control, and CORS. Dependabot checks both ecosystems weekly.
 
 **RLS enabled as defense in depth** — being honest: because the backend connects to Postgres with an owner-level role, RLS is bypassed on that path; the real protection is keeping the connection string and secret key secret, verifying the JWT, and restricting CORS. Even so, RLS stays enabled as a safety net in case any access goes through the publishable key or a direct connection.
 
 **Input validation with Pydantic** — types, required fields, allowed frequency and payment-method values, non-negative amounts, installment count > 0.
 
-**Sensitive data out of the frontend** — no client or financial data in frontend code, URL parameters, or logs. The public landing accesses no internal data.
+**Sensitive data out of the frontend** — no client or financial data in frontend code, URL parameters, or logs. The public landing receives only the catalogue's dedicated safe fields; it never receives cost, exact stock, sales totals, or timestamps.
 
-**Product photos** — stored in a Supabase Storage bucket that is **public-read**, at unguessable UUID paths. Writes go only through the authenticated backend, which holds the secret key; the bucket therefore needs no policies of its own, consistent with the deny-all RLS used on the tables. Photos are of merchandise, never of people or documents, so public read is acceptable — and it is what the deferred landing showcase will need. Every upload is decoded and re-encoded server-side, which both proves the file really is an image (the `Content-Type` header is client-supplied and can lie) and strips EXIF metadata, including the GPS coordinates phones embed.
+**Product photos** — stored in a Supabase Storage bucket that is **public-read**, at unguessable UUID paths. Writes go only through the authenticated backend, which holds the secret key; the bucket therefore needs no policies of its own, consistent with the deny-all RLS used on the tables. Photos are of merchandise, never of people or documents, so public read is acceptable — and it is what the deferred landing showcase will need. Uploads are read in bounded chunks with a 10 MB limit, then decoded and re-encoded server-side, which both proves the file really is an image (the `Content-Type` header is client-supplied and can lie) and strips EXIF metadata, including the GPS coordinates phones embed.
 
 ---
 
@@ -472,9 +488,11 @@ Sequence prioritizing getting the inventory → sale → deduction cycle working
 
 **Phase 6 — Financial summary.** Endpoint and screen with profit, total sold, received, and to receive.
 
-**Phase 7 — Landing page + hardening + deploy.** Public inf.amily landing with the tagline "por família – pra família", contact/WhatsApp, and discreet admin access (the product showcase is deferred). Review CORS/secrets/RLS/HTTPS, test the full flow in production, and polish usability for the non-technical user.
+**Phase 7 — Landing page + hardening + deploy.** Public inf.amily landing with the tagline "por família pra família", contact/WhatsApp, and discreet admin access. Review CORS/secrets/RLS/HTTPS, test the full flow in production, and polish usability for the non-technical user.
 
 **Phase 8 — Product photos.** One optional photo per item, stored in Supabase Storage; upload from the create form and from the product list; thumbnails in the list. Done when: the owner attaches a photo to a piece, sees it in the list, and can replace or remove it.
+
+**Phase 9 — Public catalogue.** A safe read-only catalogue on the landing page. Yasmin manually selects products from the protected inventory area; only selected products with a photo and positive stock are public.
 
 ---
 
@@ -484,7 +502,7 @@ Sequence prioritizing getting the inventory → sale → deduction cycle working
 
 What ships in the first release:
 
-1. Public infamily landing with the tagline "por família – pra família", basic info, contact/WhatsApp, and discreet admin access.
+1. Public infamily landing with the tagline "por família pra família", basic info, contact/WhatsApp, a manually curated product catalogue, and discreet admin access.
 2. Secure admin login (single user) via Supabase Auth.
 3. Inventory: create, search, list, and edit items with cost, sale price, and quantity.
 4. Immediate sales: select items, automatically deduct stock, record payment method and date, and search history by client or product.
@@ -503,16 +521,15 @@ All kept as simple as possible in screens and flows.
 
 Deliberately deferred:
 
-1. **Product showcase on the landing** — a public, read-only section showing available items, reusing the inventory data (product photos already live in a public-read bucket, so they are ready for it). Explicitly out of the MVP.
-2. **Payment history** (a ledger table) — enables undoing a mistakenly recorded payment and accurate per-period financial reports (including fiado receipts, which in the MVP enter only as a total).
-3. **Sale return / cancellation** — reverse a sale and return items to stock.
-4. **Product variants** (size, color, SKU, barcode) and camera/scanner input.
-5. **Alerts and notifications** for low stock and due installments (email/WhatsApp).
-6. **WhatsApp collection reminders** and a per-client "send WhatsApp" link.
-7. **Archive items and clients** (soft delete) preserving history.
-8. **Pagination** in inventory, sales, and fiado as volume grows.
-9. **Reports and charts** (sales per period, best-selling items) — out of the MVP for simplicity.
-10. **Multi-user / multi-store** and a **mobile app / PWA**.
+1. **Payment history** (a ledger table) — enables undoing a mistakenly recorded payment and accurate per-period financial reports (including fiado receipts, which in the MVP enter only as a total).
+2. **Sale return / cancellation** — reverse a sale and return items to stock.
+3. **Product variants** (size, color, SKU, barcode) and camera/scanner input.
+4. **Alerts and notifications** for low stock and due installments (email/WhatsApp).
+5. **WhatsApp collection reminders** and a per-client "send WhatsApp" link.
+6. **Archive items and clients** (soft delete) preserving history.
+7. **Pagination** in inventory, sales, and fiado as volume grows.
+8. **Reports and charts** (sales per period, best-selling items) — out of the MVP for simplicity.
+9. **Multi-user / multi-store** and a **mobile app / PWA**.
 
 ---
 
@@ -521,8 +538,6 @@ Deliberately deferred:
 ## 15. What to avoid (keeping it from getting too complex)
 
 A complexity brake — the development agent should actively resist the following.
-
-**Do not build the product showcase now.** The MVP landing is identity + tagline + login access. Public item display is future work.
 
 **Do not duplicate sale and fiado logic.** Fiado is a sale with deferred payment; use the unified model (section 2) instead of two separate paths that both deduct stock.
 

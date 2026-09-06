@@ -15,6 +15,7 @@ export type Product = {
   sale_price: string;
   stock_quantity: number;
   sold_quantity: number;
+  show_in_catalog: boolean;
   // Public URL of the product's photo, or null when it has none. The backend
   // composes it from the object's path inside the storage bucket, so the
   // frontend never needs to know the bucket's name or layout — it just renders
@@ -22,6 +23,14 @@ export type Product = {
   photo_url: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** One safe, public product returned by `GET /api/catalog`. */
+export type CatalogProduct = {
+  id: string;
+  name: string;
+  sale_price: string;
+  photo_url: string;
 };
 
 /** One client profile returned by `GET /api/clients`. */

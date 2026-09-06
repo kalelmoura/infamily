@@ -10,11 +10,12 @@ responses and stops clients from writing fields they have no business writing
 (ids, timestamps). Pydantic validates every incoming payload *before* the
 endpoint body runs — a bad request never reaches the database.
 
-Three schemas, one per direction of traffic:
+Four schemas, split by private writes, private reads, and the public catalogue:
 
   * `ProductCreate` — POST body: everything required to make a product;
   * `ProductUpdate` — PATCH body: the same fields, all optional;
   * `ProductRead`   — what we send back, including the server-generated fields.
+  * `CatalogProductRead` — the safe subset exposed on the public landing.
 """
 
 from datetime import datetime
@@ -73,6 +74,7 @@ class ProductCreate(BaseModel):
     # The only field with a default: creating an item you haven't received yet
     # is legitimate, so stock starts at zero rather than being required.
     stock_quantity: StockQuantity = 0
+    show_in_catalog: bool = False
 
 
 class ProductUpdate(BaseModel):
@@ -90,6 +92,7 @@ class ProductUpdate(BaseModel):
     cost_price: Money | None = None
     sale_price: Money | None = None
     stock_quantity: StockQuantity | None = None
+    show_in_catalog: bool | None = None
 
 
 class ProductRead(BaseModel):
@@ -115,6 +118,7 @@ class ProductRead(BaseModel):
     sale_price: Decimal
     stock_quantity: int
     sold_quantity: int = 0
+    show_in_catalog: bool
     # The photo's public URL, or None for a product without one.
     #
     # Note what is *not* here: `photo_path`, the column the database actually
@@ -131,3 +135,17 @@ class ProductRead(BaseModel):
     photo_url: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class CatalogProductRead(BaseModel):
+    """The deliberately small, public view of a featured product.
+
+    Cost, exact quantity, sales totals, and timestamps stay private. A product
+    reaches this schema only after the catalogue route has confirmed that
+    Yasmin selected it, it has a photo, and at least one unit remains.
+    """
+
+    id: UUID
+    name: str
+    sale_price: Decimal
+    photo_url: str

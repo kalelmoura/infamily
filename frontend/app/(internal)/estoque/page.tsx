@@ -30,6 +30,7 @@ export default function EstoquePage() {
   const [costPrice, setCostPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
+  const [showInCatalog, setShowInCatalog] = useState(false);
   // The photo cannot be uploaded with the rest of the form: the upload endpoint
   // addresses a product by id, and the product does not exist yet. So the file
   // waits here and is sent right after the product is created.
@@ -78,6 +79,7 @@ export default function EstoquePage() {
         cost_price: cost,
         sale_price: sale,
         stock_quantity: quantity,
+        show_in_catalog: showInCatalog,
       });
 
       // The photo is a second, separate request, so it can fail on its own —
@@ -99,6 +101,7 @@ export default function EstoquePage() {
       setCostPrice("");
       setSalePrice("");
       setStockQuantity("");
+      setShowInCatalog(false);
       setPhotoFile(null);
       setFormSuccess(
         photoFailed
@@ -222,6 +225,24 @@ export default function EstoquePage() {
             />
           </div>
         </div>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--internal-line)] bg-[var(--internal-paper-soft)] px-4 py-4">
+          <input
+            type="checkbox"
+            checked={showInCatalog}
+            onChange={(event) => setShowInCatalog(event.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--internal-olive)]"
+          />
+          <span>
+            <span className="block text-sm font-semibold">
+              Exibir no catálogo
+            </span>
+            <span className="mt-1 block text-sm leading-5 text-zinc-500">
+              A peça aparecerá na página inicial quando tiver foto e estoque
+              disponível.
+            </span>
+          </span>
+        </label>
 
         <button
           type="submit"

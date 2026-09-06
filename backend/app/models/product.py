@@ -15,6 +15,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Integer,
@@ -115,6 +116,14 @@ class Product(Base):
     # has none, and registering a piece without one has to keep working. A
     # `Mapped[str | None]` annotation is what makes the column nullable.
     photo_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Yasmin explicitly chooses which photographed pieces are promoted on the
+    # public landing page. The flag alone is not enough to publish an item: the
+    # public catalogue query also requires a photo and positive stock, so an
+    # unavailable piece disappears without exposing the exact quantity.
+    show_in_catalog: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
 
     # --- Timestamps --------------------------------------------------------
     # `DateTime(timezone=True)` maps to Postgres TIMESTAMPTZ (timestamp WITH

@@ -24,6 +24,7 @@ export default function ProdutosPage() {
   // shape as `deletingId` above, so a row can show its own busy state without
   // freezing the whole list.
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+  const [catalogBusyId, setCatalogBusyId] = useState<string | null>(null);
 
   // One hidden file input shared by every row, rather than one per product: a
   // list of eighty pieces would otherwise mount eighty file inputs. The row
@@ -119,6 +120,29 @@ export default function ProdutosPage() {
       setListError(messageFrom(error, "Não foi possível remover a foto."));
     } finally {
       setPhotoBusyId(null);
+    }
+  }
+
+  async function handleCatalogVisibility(product: Product) {
+    setCatalogBusyId(product.id);
+    setListError("");
+
+    try {
+      const updatedProduct = await api.patch<Product>(
+        `/api/products/${product.id}`,
+        { show_in_catalog: !product.show_in_catalog },
+      );
+      setProducts((current) =>
+        current.map((item) =>
+          item.id === updatedProduct.id ? updatedProduct : item,
+        ),
+      );
+    } catch (error) {
+      setListError(
+        messageFrom(error, "Não foi possível atualizar o catálogo."),
+      );
+    } finally {
+      setCatalogBusyId(null);
     }
   }
 
@@ -334,17 +358,55 @@ export default function ProdutosPage() {
                         Remover foto
                       </button>
                     )}
+                    {product.show_in_catalog && (
+                      <p className="mt-1 text-sm text-[var(--internal-olive-dark)]">
+                        {!product.photo_url
+                          ? "Adicione uma foto para aparecer no catálogo."
+                          : product.stock_quantity === 0
+                            ? "Oculto enquanto estiver sem estoque."
+                            : "Visível na página inicial."}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(product)}
-                  disabled={deletingId === product.id}
-                  className="min-h-11 w-full shrink-0 rounded-lg px-4 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 min-[480px]:w-auto"
-                >
-                  {deletingId === product.id ? "Excluindo…" : "Excluir"}
-                </button>
+                <div className="flex w-full shrink-0 flex-col gap-2 min-[480px]:w-auto min-[480px]:items-end">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={product.show_in_catalog}
+                    onClick={() => void handleCatalogVisibility(product)}
+                    disabled={
+                      catalogBusyId === product.id || deletingId === product.id
+                    }
+                    className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors disabled:opacity-50 min-[480px]:w-auto ${
+                      product.show_in_catalog
+                        ? "border-[var(--internal-olive)] bg-[var(--internal-olive)] text-white"
+                        : "border-[var(--internal-line)] bg-[var(--internal-paper-soft)] text-[var(--internal-ink)] hover:border-[var(--internal-olive)]"
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`h-2 w-2 rounded-full ${
+                        product.show_in_catalog ? "bg-white" : "bg-zinc-400"
+                      }`}
+                    />
+                    {catalogBusyId === product.id
+                      ? "Salvando…"
+                      : product.show_in_catalog
+                        ? "No catálogo"
+                        : "Fora do catálogo"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(product)}
+                    disabled={deletingId === product.id}
+                    className="min-h-11 w-full shrink-0 rounded-lg px-4 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 min-[480px]:w-auto"
+                  >
+                    {deletingId === product.id ? "Excluindo…" : "Excluir"}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
