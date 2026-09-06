@@ -100,11 +100,11 @@ Mandatory per the project; recommended libraries as guidance.
 
 **Auth keys (current Supabase model)** — Supabase now uses a **publishable key** (`sb_publishable_...`, public, used by the frontend) and a **secret key** (`sb_secret_...`, server-side only), replacing the legacy anon/service_role keys. Token verification uses **asymmetric signing keys**: the backend fetches Supabase's public keys from the **JWKS URL** to verify a token's signature — there is no shared secret to store.
 
-**Deploy** — Frontend on Vercel; backend on Render/Railway/Fly.io; database on Supabase. All with HTTPS by default.
+**Deploy** — Frontend on Vercel; backend on Render/Railway/Fly.io; database on Supabase. All with HTTPS by default. The repository's Render blueprint configures the backend build/start commands, production mode, server-only environment placeholders, and `/ready` database-aware health check without committing deployment values. Dashboard-only and release checks are maintained in `docs/PRODUCTION_CHECKLIST.md`.
 
 **Environment variables (where each goes):**
 
-- Frontend (`.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL` (the FastAPI base URL).
+- Frontend (`.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_API_URL` (the FastAPI base URL), `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_INSTAGRAM_URL`, `STORE_ADDRESS`, and the server-only `OWNER_USER_ID` used by the route guard.
 - Backend (`.env`): `DATABASE_URL` (Postgres connection string), `SUPABASE_JWKS_URL` (to verify tokens), `OWNER_USER_ID` (the single account allowed in), `FRONTEND_ORIGIN` (allowed CORS origin), and — for product photos — `SUPABASE_URL`, `SUPABASE_SECRET_KEY` and `SUPABASE_PRODUCT_PHOTOS_BUCKET`. The secret key is server-side only; without it the app still starts and only photo upload fails, with a clear 503.
 
 ---
@@ -299,7 +299,7 @@ infamily/                     # (brand displayed as: infamily)
 
 ## 7. Pages
 
-The **Landing page** (`/`, public) is the brand's front door. It contains the inf.amily identity, the tagline (UI, pt-BR) "por família pra família", basic store info, WhatsApp actions for <WhatsApp number — set via NEXT_PUBLIC_WHATSAPP_NUMBER>, a curated **product catalogue**, and a **discreet admin access link** (to the login). The catalogue shows only products Yasmin selected that also have a photo and positive stock. Its public response contains only the product id, name, sale price, and photo URL. Catalogue cards form one continuous row that loops to the right, pauses during pointer or keyboard interaction, and becomes a static horizontal list when reduced motion is requested. When no catalogue data is available, the landing page shows three local, non-clickable garment illustrations labelled (UI, pt-BR) "Em breve"; the placeholders disappear as soon as at least one eligible product is returned. The location heading appears above the address, map action, and embedded map. The displayed address and both Google Maps URLs are derived from the server-only `STORE_ADDRESS` environment variable; deployment values must not be committed.
+The **Landing page** (`/`, public) is the brand's front door. It contains the inf.amily identity, the tagline (UI, pt-BR) "por família pra família", basic store info, WhatsApp actions for <WhatsApp number — set via NEXT_PUBLIC_WHATSAPP_NUMBER>, a curated **product catalogue**, and a **discreet admin access link** (to the login). The catalogue shows only products Yasmin selected that also have a photo and positive stock. Its public response contains only the product id, name, sale price, and photo URL. Catalogue cards form one continuous row that loops to the right, pauses during pointer or keyboard interaction, and becomes a static horizontal list when reduced motion is requested. When no catalogue data is available, the landing page shows three local, non-clickable garment illustrations labelled (UI, pt-BR) "Em breve"; the placeholders disappear as soon as at least one eligible product is returned. The location heading appears above the address, map action, and embedded map. The displayed address and both Google Maps URLs are derived from the server-only `STORE_ADDRESS` environment variable; deployment values must not be committed. Internal frontend routes fail closed unless the verified Supabase token subject matches the server-only `OWNER_USER_ID`, using the same owner UUID enforced by FastAPI.
 
 The **login screen** (`/login`, public) — admin login with email and password and a sign-in button. Reached from the discreet link on the landing. On success it redirects to the internal home.
 
@@ -446,7 +446,15 @@ These cover inventory, sales, and client data.
 
 **Strict secret separation** — the frontend only knows the Supabase URL and the publishable key. The **secret key and the database connection string live only on the backend**, in the provider's environment variables, never exposed to the browser.
 
-**CORS restricted** — the backend only accepts requests from the frontend domain.
+**CORS restricted** — the backend only accepts requests from the frontend domain, permits only the methods the application uses, and accepts only the `Authorization` and `Content-Type` request headers. The API receives its JWT in the `Authorization` header rather than a cross-origin cookie, so credentialed CORS is disabled.
+
+**Production configuration fails closed** — startup rejects an unknown environment name, a wildcard or path-bearing frontend origin, a non-HTTPS production frontend, a malformed owner UUID or JWKS URL, a missing production owner, and a database URL that does not select the asyncpg driver.
+
+**Browser security headers** — the frontend sends an enforcing Content Security Policy scoped to its own scripts and styles, Supabase connections and images, the configured FastAPI origin, and the Google Maps frame. It also denies framing, disables MIME sniffing and unused browser capabilities, limits referrer data, and enables HSTS in production.
+
+**Sensitive-response caching disabled** — protected API responses use `Cache-Control: no-store`; the intentionally public catalogue remains cacheable. Render uses `/ready` as its health-check path so a deployment is considered ready only when both FastAPI and Postgres respond.
+
+**Dependency and build checks** — direct Python dependencies and the frontend lockfile are version-pinned. Pull requests run dependency audits, linting, frontend production builds, Python compilation, and backend security-boundary tests covering production API-doc removal, authentication, cache control, and CORS. Dependabot checks both ecosystems weekly.
 
 **RLS enabled as defense in depth** — being honest: because the backend connects to Postgres with an owner-level role, RLS is bypassed on that path; the real protection is keeping the connection string and secret key secret, verifying the JWT, and restricting CORS. Even so, RLS stays enabled as a safety net in case any access goes through the publishable key or a direct connection.
 
@@ -454,7 +462,7 @@ These cover inventory, sales, and client data.
 
 **Sensitive data out of the frontend** — no client or financial data in frontend code, URL parameters, or logs. The public landing receives only the catalogue's dedicated safe fields; it never receives cost, exact stock, sales totals, or timestamps.
 
-**Product photos** — stored in a Supabase Storage bucket that is **public-read**, at unguessable UUID paths. Writes go only through the authenticated backend, which holds the secret key; the bucket therefore needs no policies of its own, consistent with the deny-all RLS used on the tables. Photos are of merchandise, never of people or documents, so public read is acceptable — and it is what the deferred landing showcase will need. Every upload is decoded and re-encoded server-side, which both proves the file really is an image (the `Content-Type` header is client-supplied and can lie) and strips EXIF metadata, including the GPS coordinates phones embed.
+**Product photos** — stored in a Supabase Storage bucket that is **public-read**, at unguessable UUID paths. Writes go only through the authenticated backend, which holds the secret key; the bucket therefore needs no policies of its own, consistent with the deny-all RLS used on the tables. Photos are of merchandise, never of people or documents, so public read is acceptable — and it is what the deferred landing showcase will need. Uploads are read in bounded chunks with a 10 MB limit, then decoded and re-encoded server-side, which both proves the file really is an image (the `Content-Type` header is client-supplied and can lie) and strips EXIF metadata, including the GPS coordinates phones embed.
 
 ---
 

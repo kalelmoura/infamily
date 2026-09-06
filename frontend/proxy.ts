@@ -39,11 +39,15 @@ export async function proxy(request: NextRequest) {
   // request, including public pages, or sessions would silently expire
   // while the user browses them.
   const { data, error } = await supabase.auth.getClaims();
-  const hasValidSession = !error && !!data?.claims;
+  const ownerUserId = process.env.OWNER_USER_ID?.trim();
+  const isOwner =
+    !error &&
+    Boolean(ownerUserId) &&
+    data?.claims?.sub === ownerUserId;
 
   const isPublicPath = PUBLIC_PATHS.includes(request.nextUrl.pathname);
 
-  if (!isPublicPath && !hasValidSession) {
+  if (!isPublicPath && !isOwner) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     return NextResponse.redirect(loginUrl);

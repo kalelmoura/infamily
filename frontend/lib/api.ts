@@ -140,7 +140,7 @@ async function request<T>(
     // defence. A full page load (rather than the router) is deliberate: it
     // discards every piece of stale client state on the way out.
     if (typeof window !== "undefined") {
-      window.location.href = "/login";
+      window.location.replace(new URL("/login", window.location.origin));
     }
     throw new ApiError("Sessão expirada. Faça login novamente.", 401);
   }

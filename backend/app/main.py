@@ -7,11 +7,14 @@ In Phase 0 it wires up CORS (so the Next.js frontend can call the API) and
 exposes a single health-check endpoint.
 """
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.config import settings
+from app.database import get_db
 from app.routers import catalog, clients, dashboard, fiado, products, sales, summary
 
 # title (inf.amily API) = the instance is my app and the API menas the backend
@@ -30,9 +33,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 # configuring the the add_middleware methods
 # app.add_middleware = calling a method (func) from app, the FastAPI class
@@ -56,10 +59,30 @@ app.include_router(dashboard.router)
 app.include_router(summary.router)
 
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Prevent sensitive API responses from being cached or MIME-sniffed."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+
+    if request.url.path.startswith("/api/") and request.url.path != "/api/catalog":
+        response.headers["Cache-Control"] = "no-store"
+
+    return response
+
+
 @app.get("/health")
 def health_check():
     """Liveness probe: confirms the service is up and serving requests."""
     return {"status": "ok"}
+
+
+@app.get("/ready")
+async def readiness_check(db: AsyncSession = Depends(get_db)):
+    """Readiness probe: confirms the API can also reach Postgres."""
+    await db.execute(text("SELECT 1"))
+    return {"status": "ready"}
 
 
 # Protected test endpoint. `claims: dict = Depends(get_current_user)` tells

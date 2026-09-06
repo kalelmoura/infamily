@@ -43,6 +43,7 @@ from app.services.storage import build_public_url, delete_photo, upload_photo
 # about not decoding a 200 MB file someone sent to see what happens. Ten MB is
 # comfortably above any phone photo.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
 
 # The formats a browser will hand over from a phone's camera or gallery. This
 # check is only the cheap first pass — the header is client-supplied and can
@@ -66,6 +67,21 @@ router = APIRouter(
     # is FastAPI's way to say "run this check, discard its return value".
     dependencies=[Depends(get_current_user)],
 )
+
+
+async def _read_photo_with_limit(file: UploadFile) -> bytes:
+    """Read at most one chunk beyond the limit before rejecting the upload."""
+    contents = bytearray()
+
+    while chunk := await file.read(UPLOAD_READ_CHUNK_BYTES):
+        contents.extend(chunk)
+        if len(contents) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="A imagem é muito grande. O limite é 10 MB.",
+            )
+
+    return bytes(contents)
 
 
 async def _get_product_or_404(db: AsyncSession, product_id: UUID) -> Product:
@@ -318,15 +334,9 @@ async def upload_product_photo(
             detail="Envie uma imagem JPG, PNG ou WEBP.",
         )
 
-    raw = await file.read()
-
-    if len(raw) > MAX_UPLOAD_BYTES:
-        # 413 is the status for "your body is too big" — a real HTTP answer
-        # rather than a generic 400, so a client could act on it specifically.
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="A imagem é muito grande. O limite é 10 MB.",
-        )
+    # Read in bounded chunks so an attacker cannot make the process allocate
+    # an arbitrarily large byte string before the 10 MB limit is checked.
+    raw = await _read_photo_with_limit(file)
 
     if not raw:
         raise HTTPException(
