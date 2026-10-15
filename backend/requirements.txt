@@ -4,17 +4,17 @@
 # compiled extras (uvloop/httptools/watchfiles) that may lack wheels on very
 # new Python versions. --reload still works via a stat-based fallback reloader.
 
-fastapi==0.141.1
-uvicorn==0.52.4
+fastapi==0.143.0
+uvicorn==0.54.0
 pydantic-settings==2.15.0
-PyJWT[crypto]==2.13.0
+PyJWT[crypto]==2.15.1
 # The [asyncio] extra pulls in greenlet, which SQLAlchemy's async layer needs
 # to bridge its (synchronous) internals to async I/O. Plain `sqlalchemy` does
 # not always install it — on Python 3.14 it did not, and every session close
 # raised "the greenlet library is required". Always use the extra for async.
-sqlalchemy[asyncio]==2.0.52
-asyncpg==0.31.0
-alembic==1.19.2
+sqlalchemy[asyncio]==2.1.4
+asyncpg==0.32.0
+alembic==1.20.0
 # Calendar-aware date math for fiado installments. Adding "one month" to a due
 # date is not adding 30 days — relativedelta knows that 31 Jan + 1 month is the
 # last day of February, which naive arithmetic gets wrong every single time.
