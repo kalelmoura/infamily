@@ -29,7 +29,7 @@ python-multipart==0.0.32
 # header and a file extension are both client-supplied and both lie. Pillow
 # also fixes the phone-rotation flag and strips EXIF (GPS included) on the
 # re-encode, which matters because the photo bucket is public-read.
-Pillow==12.3.0
+Pillow==13.0.0
 # Async HTTP client for the Supabase Storage REST API. Deliberately not the
 # `supabase` package: it drags in gotrue, postgrest, realtime and storage3 to
 # do what is, here, exactly two HTTP calls.
