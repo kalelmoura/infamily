@@ -4,21 +4,21 @@
 # compiled extras (uvloop/httptools/watchfiles) that may lack wheels on very
 # new Python versions. --reload still works via a stat-based fallback reloader.
 
-fastapi==0.141.1
-uvicorn==0.52.4
-pydantic-settings==2.15.0
-PyJWT[crypto]==2.13.0
+fastapi==0.162.0
+uvicorn==0.54.0
+pydantic-settings==2.16.1
+PyJWT[crypto]==2.15.1
 # The [asyncio] extra pulls in greenlet, which SQLAlchemy's async layer needs
 # to bridge its (synchronous) internals to async I/O. Plain `sqlalchemy` does
 # not always install it — on Python 3.14 it did not, and every session close
 # raised "the greenlet library is required". Always use the extra for async.
-sqlalchemy[asyncio]==2.0.52
-asyncpg==0.31.0
-alembic==1.19.2
+sqlalchemy[asyncio]==2.1.6
+asyncpg==0.32.0
+alembic==1.20.1
 # Calendar-aware date math for fiado installments. Adding "one month" to a due
 # date is not adding 30 days — relativedelta knows that 31 Jan + 1 month is the
 # last day of February, which naive arithmetic gets wrong every single time.
-python-dateutil==2.9.0.post0
+python-dateutil==3.0.0
 
 # --- Phase 8: product photos ---
 # FastAPI parses multipart/form-data (what a file upload is) through this
@@ -29,7 +29,7 @@ python-multipart==0.0.32
 # header and a file extension are both client-supplied and both lie. Pillow
 # also fixes the phone-rotation flag and strips EXIF (GPS included) on the
 # re-encode, which matters because the photo bucket is public-read.
-Pillow==12.3.0
+Pillow==13.0.0
 # Async HTTP client for the Supabase Storage REST API. Deliberately not the
 # `supabase` package: it drags in gotrue, postgrest, realtime and storage3 to
 # do what is, here, exactly two HTTP calls.
